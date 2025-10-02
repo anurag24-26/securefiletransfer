@@ -3,7 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const Organization = require("../models/Organization");
 const authMiddleware = require("../middleware/authMiddleware");
-
+const authorizeRoles = require("../middleware/authorizeRoles");
 // Assign a user to an organization/department
 router.put("/:userId/assign-org/:orgId", authMiddleware, async (req, res) => {
   try {
@@ -47,5 +47,26 @@ router.get("/org/:orgId", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+router.put(
+  "/:userId/assign-org/:orgId",
+  authMiddleware,
+  authorizeRoles("admin", "manager"),
+  async (req, res) => {
+    try {
+      const { userId, orgId } = req.params;
 
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { orgId },
+        { new: true }
+      );
+
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json({ message: "User assigned to org successfully", user });
+    } catch (err) {
+      res.status(500).json({ message: "Server error", error: err.message });
+    }
+  }
+);
 module.exports = router;
