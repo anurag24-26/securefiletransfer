@@ -1,29 +1,31 @@
-// Example with React Router v6
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import Login from "./pages/Login.jsx";
-import ProtectedRoute from "./routes/ProtectedRoute.jsx";
-import Dashboard from "./pages/Dashboard.jsx"; // your page
-import "./index.css";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Home from './pages/Home';
+import ProtectedRoute from './components/ProtectedRoute';
 
-const router = createBrowserRouter([
-  { path: "/login", element: <Login /> },
-  {
-    element: <ProtectedRoute />,
-    children: [
-      { path: "/", element: <Dashboard /> },
-      { path: "/dashboard", element: <Dashboard /> },
-      // ...other protected routes
-    ],
-  },
-]);
+export default function App() {
+  return (
+    <div className="font-sans">
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
-  </React.StrictMode>
-);
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback redirect */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </div>
+  );
+}
