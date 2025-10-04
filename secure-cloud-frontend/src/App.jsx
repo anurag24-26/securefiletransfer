@@ -1,31 +1,35 @@
+// src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Home from './pages/Home';
-import ProtectedRoute from './components/ProtectedRoute';
 
-export default function App() {
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />; // replace prevents back button glitch
+
+  return children;
+};
+
+function App() {
   return (
-    <div className="font-sans">
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Fallback redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+    </Routes>
   );
 }
+
+export default App;

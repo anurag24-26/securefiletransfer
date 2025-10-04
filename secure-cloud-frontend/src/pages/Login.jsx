@@ -1,76 +1,69 @@
+// src/pages/Login.jsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-export default function Login() {
+const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      alert('Login successful ✅');
-      navigate('/');
-    } catch (err) {
-      console.error(err);
-      alert(err?.response?.data?.message || 'Login failed ❌');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  try {
+    await login(email, password); // login now sets user & token in context
+    navigate('/'); // redirect Home
+  } catch (err) {
+    setError(err.response?.data?.message || 'Invalid credentials');
+  }
+};
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-lg rounded-lg p-8 w-96">
-        <h1 className="text-2xl font-bold text-center mb-6">Login</h1>
-        <form onSubmit={handleSubmit}>
-          <label className="block mb-2 text-sm font-medium text-gray-700">
-            Email
-          </label>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-96">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Login</h2>
+
+        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
-            className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-blue-300"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
 
-          <label className="block mb-2 text-sm font-medium text-gray-700">
-            Password
-          </label>
           <input
             type="password"
-            className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring focus:ring-blue-300"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            Login
           </button>
         </form>
 
-        <p className="text-sm text-center mt-4">
+        <p className="text-sm text-center mt-4 text-gray-600">
           Don’t have an account?{' '}
-          <span
-            onClick={() => navigate('/signup')}
-            className="text-blue-600 hover:underline cursor-pointer"
-          >
+          <Link to="/signup" className="text-blue-500 hover:underline">
             Sign up
-          </span>
+          </Link>
         </p>
       </div>
     </div>
   );
-}
+};
+
+export default Login;

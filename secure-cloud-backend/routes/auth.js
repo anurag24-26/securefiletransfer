@@ -54,13 +54,26 @@ router.post("/login", async (req, res) => {
 });
 
 // Protected route example
+
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-passwordHash");
-    res.json(user);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Fetch org hierarchy
+    let orgHierarchy = [];
+    let currentOrgId = user.orgId;
+
+    while (currentOrgId) {
+      const org = await Organization.findById(currentOrgId);
+      if (!org) break;
+      orgHierarchy.unshift({ _id: org._id, name: org.name, type: org.type });
+      currentOrgId = org.parentId; // move up to parent
+    }
+
+    res.json({ user: { ...user.toObject(), orgHierarchy } });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
 module.exports = router;

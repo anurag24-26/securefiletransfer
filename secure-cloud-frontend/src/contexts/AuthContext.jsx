@@ -1,61 +1,34 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
-
-// Custom hook for easy access
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);    // user object
+  const [token, setToken] = useState(null);  // JWT in memory
+  const [loading, setLoading] = useState(false);
 
-  // Check if token exists and fetch user data
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchUser = async () => {
-      try {
-        const { data } = await api.get('/auth/me');
-        setUser(data.user);
-      } catch (err) {
-        console.error('Auth check failed:', err);
-        localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  // Login function (can be reused)
+  // Login: store token and user in memory only
   const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
+    setLoading(true);
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      setToken(data.token);  // in memory
+      setUser(data.user);    // in memory
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Logout function
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {!loading ? children : (
-        <div className="flex justify-center items-center h-screen">
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      )}
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+      {children}
     </AuthContext.Provider>
   );
 };

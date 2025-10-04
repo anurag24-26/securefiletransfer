@@ -1,125 +1,83 @@
+// src/pages/Signup.jsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
-export default function Signup() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user',
-    orgId: ''
-  });
-  const [loading, setLoading] = useState(false);
+const Signup = () => {
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setError('');
     try {
-      const { data } = await api.post('/auth/signup', formData);
-
-      // Auto login after signup
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      alert('Account created successfully ✅');
-      navigate('/');
+      await api.post('/auth/signup', form);
+      navigate('/login');
     } catch (err) {
-      console.error(err);
-      alert(err?.response?.data?.message || 'Signup failed ❌');
-    } finally {
-      setLoading(false);
+      setError(err.response?.data?.message || 'Signup failed');
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <div className="bg-white shadow-lg rounded-lg p-8 w-96">
-        <h1 className="text-2xl font-bold text-center mb-6">Create Account</h1>
-        <form onSubmit={handleSubmit}>
-          {/* Name */}
-          <label className="block mb-2 text-sm font-medium text-gray-700">Name</label>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-96">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Sign Up</h2>
+
+        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
             name="name"
-            value={formData.name}
+            placeholder="Full Name"
+            value={form.name}
             onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
-            className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-blue-300"
           />
 
-          {/* Email */}
-          <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
           <input
             type="email"
             name="email"
-            value={formData.email}
+            placeholder="Email"
+            value={form.email}
             onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
-            className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-blue-300"
           />
 
-          {/* Password */}
-          <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
           <input
             type="password"
             name="password"
-            value={formData.password}
+            placeholder="Password"
+            value={form.password}
             onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
-            className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-blue-300"
           />
 
-          {/* Role Selection */}
-          <label className="block mb-2 text-sm font-medium text-gray-700">Role</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-blue-300"
-          >
-            <option value="user">User</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
-          </select>
-
-          {/* Org ID (optional) */}
-          <label className="block mb-2 text-sm font-medium text-gray-700">Organization ID (optional)</label>
-          <input
-            type="text"
-            name="orgId"
-            value={formData.orgId}
-            onChange={handleChange}
-            placeholder="Enter Org ID if you have one"
-            className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring focus:ring-blue-300"
-          />
-
-          {/* Submit button */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            Sign Up
           </button>
         </form>
 
-        <p className="text-sm text-center mt-4">
+        <p className="text-sm text-center mt-4 text-gray-600">
           Already have an account?{' '}
-          <span
-            onClick={() => navigate('/login')}
-            className="text-blue-600 hover:underline cursor-pointer"
-          >
+          <Link to="/login" className="text-blue-500 hover:underline">
             Login
-          </span>
+          </Link>
         </p>
       </div>
     </div>
   );
-}
+};
+
+export default Signup;
