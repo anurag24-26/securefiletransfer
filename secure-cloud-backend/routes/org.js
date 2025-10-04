@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Organization = require("../models/Organization");
 const authMiddleware = require("../middleware/authMiddleware");
-const authorizeRoles=require("../middleware/authorizeRoles")
+const authorizeRoles=require("../middleware/authorizeRoles");
 // Create an organization
 router.post("/create", authMiddleware, async (req, res) => {
   try {
