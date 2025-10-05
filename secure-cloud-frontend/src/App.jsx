@@ -8,7 +8,7 @@ import OrgList from "./pages/OrgList";
 import FileList from "./pages/FileList";
 import AdminSettings from "./pages/AdminSettings";
 import Navbar from "./components/Navbar";
-
+import MyOrganization from "./pages/MyOrganization";
 function App() {
   return (
     <AuthProvider>
@@ -22,6 +22,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/adminSettings" element={<AdminSettings />} />
+             <Route path="/myOrganization" element={<MyOrganization />} />
           </Routes>
         </div>
       </BrowserRouter>

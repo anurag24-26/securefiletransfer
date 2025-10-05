@@ -14,16 +14,13 @@ const AdminSettings = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [requestProcessingId, setRequestProcessingId] = useState(null);
+  const [processing, setProcessing] = useState(null);
 
-  // Redirect non-admin users
   useEffect(() => {
-    if (!user || !token) {
+    if (!token) {
       navigate("/login");
-    } else if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
-      navigate("/");
     }
-  }, [user, token, navigate]);
+  }, [token, navigate]);
 
   useEffect(() => {
     if (!token || !user) return;
@@ -31,16 +28,28 @@ const AdminSettings = () => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+
+      if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
+        navigate("/");
+        return;
+      }
+
       try {
-        const [usersRes, deptsRes, reqsRes] = await Promise.all([
-          api.get("/admin/users/emails", { headers: { Authorization: `Bearer ${token}` } }),
-          api.get("/admin/departments", { headers: { Authorization: `Bearer ${token}` } }),
-          api.get("/admin/requests", { headers: { Authorization: `Bearer ${token}` } }),
+        const [usersRes, deptRes, reqRes] = await Promise.all([
+          api.get("/admin/users/emails", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          api.get("/admin/departments", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          api.get("/requests", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
-        setAllUsers(usersRes.data.users);
-        setDepartments(deptsRes.data.departments);
-        setRequests(reqsRes.data.requests);
+        setAllUsers(usersRes.data.users || []);
+        setDepartments(deptRes.data.departments || []);
+        setRequests(reqRes.data.requests || []);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to fetch data");
       } finally {
@@ -49,7 +58,7 @@ const AdminSettings = () => {
     };
 
     fetchData();
-  }, [token, user]);
+  }, [token, user, navigate]);
 
   const handleSendRequest = async () => {
     if (!selectedUserId || !selectedDeptId) {
@@ -57,38 +66,54 @@ const AdminSettings = () => {
       return;
     }
     try {
-      await api.post("/admin/requests", { targetUserId: selectedUserId, departmentId: selectedDeptId }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post(
+        "/requests",
+        {
+          targetUserId: selectedUserId,
+          departmentId: selectedDeptId,
+          requestType: "admin", // 🔹 explicitly mark this as admin request
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert("Admin request sent successfully.");
-    } catch {
-      alert("Failed to send admin request.");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to send admin request.");
     }
   };
 
   const handleRequestResponse = async (requestId, action) => {
-    setRequestProcessingId(requestId);
+    setProcessing(requestId);
     try {
-      await api.post(`/admin-settings/requests/${requestId}/respond`, { action }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(
+        `/requests/${requestId}/action`,
+        { action },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setRequests((prev) => prev.filter((r) => r._id !== requestId));
-      alert(`Request ${action}ed`);
-    } catch {
-      alert("Failed to process request.");
+      alert(`Request ${action}ed successfully.`);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to process request.");
     } finally {
-      setRequestProcessingId(null);
+      setProcessing(null);
     }
   };
 
-  if (loading) return <p className="text-center py-10 text-gray-600">Loading...</p>;
-  if (error) return <p className="text-center py-10 text-red-600">{error}</p>;
+  if (loading)
+    return <p className="text-center py-10 text-gray-600">Loading...</p>;
+  if (error)
+    return <p className="text-center py-10 text-red-600">{error}</p>;
 
   return (
     <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
-      <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Admin Settings</h2>
+      <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">
+        Admin Settings
+      </h2>
 
-      {/* Assign Department Admin */}
+      {/* --- Assign Department Admin Section --- */}
       <section className="mb-10">
-        <h3 className="text-xl font-semibold mb-4 text-gray-700">Assign Department Admin</h3>
+        <h3 className="text-xl font-semibold mb-4 text-gray-700">
+          Assign Department Admin
+        </h3>
         <div className="flex flex-col md:flex-row gap-4">
           <select
             value={selectedUserId}
@@ -125,9 +150,11 @@ const AdminSettings = () => {
         </div>
       </section>
 
-      {/* Pending Admin Requests */}
+      {/* --- Pending Requests Section --- */}
       <section>
-        <h3 className="text-xl font-semibold mb-4 text-gray-700">Pending Admin Requests</h3>
+        <h3 className="text-xl font-semibold mb-4 text-gray-700">
+          Pending Requests
+        </h3>
         {requests.length === 0 ? (
           <p className="text-gray-600">No pending requests.</p>
         ) : (
@@ -138,20 +165,27 @@ const AdminSettings = () => {
                 className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border border-gray-300 rounded-md hover:shadow"
               >
                 <div className="mb-3 md:mb-0">
-                  <span className="font-semibold text-gray-800">{req.sender.name}</span>{" "}
+                  <span className="font-semibold text-gray-800">
+                    {req.requestedBy?.name || req.sender?.name || "Unknown"}
+                  </span>{" "}
                   <span className="text-gray-500">&rarr;</span>{" "}
-                  <span className="font-medium text-blue-600">{req.department.name}</span>
+                  <span className="font-medium text-blue-600">
+                    {req.orgId?.name || req.department?.name || "N/A"}
+                  </span>{" "}
+                  <span className="ml-2 text-gray-600 text-sm">
+                    ({req.requestType})
+                  </span>
                 </div>
                 <div className="flex gap-3">
                   <button
-                    disabled={requestProcessingId === req._id}
-                    onClick={() => handleRequestResponse(req._id, "accept")}
+                    disabled={processing === req._id}
+                    onClick={() => handleRequestResponse(req._id, "approve")}
                     className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
                   >
-                    Accept
+                    Approve
                   </button>
                   <button
-                    disabled={requestProcessingId === req._id}
+                    disabled={processing === req._id}
                     onClick={() => handleRequestResponse(req._id, "reject")}
                     className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
                   >

@@ -1,31 +1,54 @@
 import React, { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
+  const { user, token, logout } = useAuth();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLinks = [
+  const activeClass = "text-blue-500 border-b-2 border-blue-500";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  // Links visible to all users
+  const commonLinks = [
     { to: "/", label: "Home" },
-    { to: "/orglist", label: "Organizations" },
+ {to:"/myOrganization", label: "My Organization"},
     { to: "/filelist", label: "Files" },
-    { to: "/adminSettings", label: "Admin Settings" },
+  ];
+
+  // Links for unauthenticated users
+  const authLinks = [
     { to: "/login", label: "Login" },
     { to: "/signup", label: "Sign Up" },
   ];
 
-  const activeClass = "text-blue-500 border-b-2 border-blue-500";
+  // Links for authenticated users
+  const userLinks = [];
+
+  // Show Admin Settings only for admins
+  if (user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
+    userLinks.push({ to: "/adminSettings", label: "Admin Settings" },{   to: "/orglist", label: "Organizations" });
+  }
 
   return (
     <nav className="fixed top-0 w-full bg-white bg-opacity-30 backdrop-blur-md shadow-md z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="text-2xl font-black text-gray-900 hover:text-blue-600 transition">
+          <Link
+            to="/"
+            className="text-2xl font-black text-gray-900 hover:text-blue-600 transition"
+          >
             SecureCloud
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-8">
-            {navLinks.map((link) => (
+          <div className="hidden md:flex space-x-8 items-center">
+            {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -38,6 +61,15 @@ const Navbar = () => {
                 {link.label}
               </NavLink>
             ))}
+
+            {token && (
+              <button
+                onClick={handleLogout}
+                className="ml-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+              >
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile hamburger button */}
@@ -48,11 +80,25 @@ const Navbar = () => {
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -65,7 +111,7 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="md:hidden bg-white bg-opacity-40 backdrop-blur-md shadow-inner border-t border-gray-200">
           <div className="pt-2 pb-3 space-y-1">
-            {navLinks.map((link) => (
+            {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
@@ -80,6 +126,15 @@ const Navbar = () => {
                 {link.label}
               </NavLink>
             ))}
+
+            {token && (
+              <button
+                onClick={handleLogout}
+                className="w-full text-left bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -66,4 +66,58 @@ router.get(
   }
 );
 
+router.get(
+  "/my-org-info",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user.userId);
+      if (!user || !user.orgId) return res.status(404).json({ message: "No organization assigned" });
+
+      async function getAllOrgIds(orgId) {
+        const ids = [orgId];
+        const children = await Organization.find({ parentId: orgId });
+        for (const child of children) {
+          ids.push(...(await getAllOrgIds(child._id)));
+        }
+        return ids;
+      }
+
+      const orgIds = await getAllOrgIds(user.orgId);
+
+      const org = await Organization.findById(user.orgId).select('name type parentId joinCode');
+
+      const admins = await User.find({
+        orgId: { $in: orgIds },
+        role: { $regex: "Admin$", $options: "i" } // roles ending with Admin (superAdmin, orgAdmin, deptAdmin)
+      }).select("name email role");
+
+      let parentName = null;
+      if (org.parentId) {
+        const parent = await Organization.findById(org.parentId).select("name");
+        parentName = parent?.name || null;
+      }
+
+      res.json({
+        organization: {
+          id: org._id,
+          name: org.name,
+          type: org.type,
+          parent: parentName,
+          joinCode: org.joinCode,
+          admins: admins.map(a => ({
+            id: a._id,
+            name: a.name,
+            email: a.email,
+            role: a.role
+          })),
+        }
+      });
+    } catch (error) {
+      console.error("Fetch my org info error:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  }
+);
+
 module.exports = router;

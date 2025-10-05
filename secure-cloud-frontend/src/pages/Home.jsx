@@ -9,10 +9,14 @@ const Home = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [requests, setRequests] = useState([]);
+  const [adminRequests, setAdminRequests] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
 
   useEffect(() => {
-    if (!token) return navigate("/login");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     const fetchUserAndRequests = async () => {
       try {
@@ -21,10 +25,21 @@ const Home = () => {
         });
         setUser(userData.user);
 
-        const { data: requestData } = await api.get("/admin/requests", {
+        // Fetch admin-related requests if user is admin
+        if (["superAdmin", "orgAdmin", "deptAdmin"].includes(userData.user.role)) {
+          const { data: adminReqData } = await api.get("/requests", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setAdminRequests(adminReqData.requests || []);
+        } else {
+          setAdminRequests([]);
+        }
+
+        // Always fetch requests targeted to this user themselves
+        const { data: myReqData } = await api.get("/requests/my-requests", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setRequests(requestData.requests || []);
+        setMyRequests(myReqData.requests || []);
       } catch {
         setError("Session expired. Please login again.");
         logout();
@@ -39,14 +54,18 @@ const Home = () => {
   const respondToRequest = async (id, action) => {
     try {
       const { data } = await api.post(
-        `/admin/requests/${id}/respond`,
+        `/requests/${id}/action`,
         { action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert(data.message);
-      setRequests((prev) => prev.filter((r) => r._id !== id));
-      if (action === "accept") setUser(data.user);
+
+      setAdminRequests((prev) => prev.filter((r) => r._id !== id));
+      setMyRequests((prev) => prev.filter((r) => r._id !== id));
+
+      if (action === "approve" && data.user) {
+        setUser(data.user);
+      }
     } catch {
       alert("Failed to respond. Try again.");
     }
@@ -108,13 +127,13 @@ const Home = () => {
         </section>
 
         {/* Admin Requests */}
-        {requests.length > 0 && (
-          <section>
+        {["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role) && adminRequests.length > 0 && (
+          <section className="mb-10">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Pending Admin Requests
             </h2>
             <div className="space-y-4">
-              {requests.map((r) => (
+              {adminRequests.map((r) => (
                 <div
                   key={r._id}
                   className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex justify-between items-center"
@@ -127,7 +146,7 @@ const Home = () => {
                   </div>
                   <div className="space-x-2">
                     <button
-                      onClick={() => respondToRequest(r._id, "accept")}
+                      onClick={() => respondToRequest(r._id, "approve")}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg"
                     >
                       Accept
@@ -135,6 +154,46 @@ const Home = () => {
                     <button
                       onClick={() => respondToRequest(r._id, "reject")}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* User Targeted Requests */}
+        {myRequests.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+              My Pending Requests
+            </h2>
+            <div className="space-y-4">
+              {myRequests.map((r) => (
+                <div
+                  key={r._id}
+                  className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex justify-between items-center"
+                >
+                  {/* Message varies by request type */}
+                  <div className="text-gray-700 space-y-1">
+                    <p>
+                      <strong>{r.sender?.name || "Someone"}</strong> sent you a <span className="capitalize">{r.type}</span> request for{" "}
+                      <strong>{r.orgId?.name || r.departmentId?.name || "Organization"}</strong>
+                    </p>
+                    {r.message && <p className="italic text-sm text-gray-500">{r.message}</p>}
+                  </div>
+                  <div className="space-x-2">
+                    <button
+                      onClick={() => respondToRequest(r._id, "approve")}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => respondToRequest(r._id, "reject")}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg"
                     >
                       Reject
                     </button>
