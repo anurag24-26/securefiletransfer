@@ -6,19 +6,24 @@ import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 import OrgList from "./pages/OrgList";
 import FileList from "./pages/FileList";
-import AdminSettings from "./pages/AdminSettings"
+import AdminSettings from "./pages/AdminSettings";
+import Navbar from "./components/Navbar";
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/orglist" element={<OrgList />} />
-          <Route path="/filelist" element={<FileList />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/adminSettings" element={<AdminSettings/>} />
-        </Routes>
+        <Navbar />
+        <div className="pt-16"> {/* To offset fixed Navbar height */}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/orglist" element={<OrgList />} />
+            <Route path="/filelist" element={<FileList />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/adminSettings" element={<AdminSettings />} />
+          </Routes>
+        </div>
       </BrowserRouter>
     </AuthProvider>
   );

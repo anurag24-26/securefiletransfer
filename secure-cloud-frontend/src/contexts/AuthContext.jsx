@@ -10,14 +10,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Login function
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
       const { data } = await api.post("/auth/login", { email, password });
+
+      // Save token & user in state and axios headers
       setToken(data.token);
       setUser(data.user);
       setAuthToken(data.token);
+
       return true;
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -27,6 +31,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Logout function
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -34,7 +39,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, error, setUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        loading,
+        error,
+        setUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

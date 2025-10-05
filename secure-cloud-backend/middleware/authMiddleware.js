@@ -1,20 +1,28 @@
 const jwt = require("jsonwebtoken");
 
+// Middleware to check JWT token
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer "))
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "No token, authorization denied" });
+  }
 
   const token = authHeader.split(" ")[1];
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    // Standardize payload
+    req.user = {
+      userId: decoded.id || decoded.userId, // your token should have id
+      role: decoded.role,
+    };
     next();
   } catch (error) {
-    res.status(401).json({ message: "Token is not valid" });
+    return res.status(401).json({ message: "Token is not valid" });
   }
 };
 
+// Middleware to authorize specific roles
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

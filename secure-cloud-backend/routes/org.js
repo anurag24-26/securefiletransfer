@@ -28,6 +28,16 @@ router.post(
       const org = new Organization({ name, type, parentId: parent, joinCode, admin });
       await org.save();
 
+      // Automatically assign orgId to creator if they are orgAdmin creating a root org
+      if (req.user.role === "orgAdmin" && type === "organization") {
+        await User.findByIdAndUpdate(req.user.userId, { orgId: org._id });
+      }
+
+      // If creating a department and deptAdminId provided, assign orgId to that user
+      if (type === "department" && deptAdminId) {
+        await User.findByIdAndUpdate(deptAdminId, { orgId: org._id, role: "deptAdmin" });
+      }
+
       res.status(201).json({ message: "Created successfully", organization: org, joinCode });
     } catch (error) {
       console.error("Create org error:", error);
@@ -35,7 +45,6 @@ router.post(
     }
   }
 );
-
 // Regenerate join code for existing org/department
 router.post(
   "/:id/generate-code",

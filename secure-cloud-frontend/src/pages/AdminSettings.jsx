@@ -4,7 +4,7 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 const AdminSettings = () => {
-  const { user, token, logout } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
 
   const [allUsers, setAllUsers] = useState([]);
@@ -16,121 +16,84 @@ const AdminSettings = () => {
   const [error, setError] = useState(null);
   const [requestProcessingId, setRequestProcessingId] = useState(null);
 
-  // Redirect if not an admin
+  // Redirect non-admin users
   useEffect(() => {
     if (!user || !token) {
       navigate("/login");
     } else if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
-      navigate("/"); // redirect non-admins
+      navigate("/");
     }
   }, [user, token, navigate]);
 
   useEffect(() => {
     if (!token || !user) return;
 
-    setLoading(true);
-    setError(null);
-
-    // Fetch all users in org
-    const fetchUsers = async () => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await api.get("/admin/users/emails", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAllUsers(res.data.users);
+        const [usersRes, deptsRes, reqsRes] = await Promise.all([
+          api.get("/admin/users/emails", { headers: { Authorization: `Bearer ${token}` } }),
+          api.get("/admin/departments", { headers: { Authorization: `Bearer ${token}` } }),
+          api.get("/admin/requests", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        setAllUsers(usersRes.data.users);
+        setDepartments(deptsRes.data.departments);
+        setRequests(reqsRes.data.requests);
       } catch (err) {
-        setError("Failed to load users");
+        setError(err.response?.data?.message || "Failed to fetch data");
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Fetch all departments in org
-    const fetchDepartments = async () => {
-      try {
-        const res = await api.get("/admin/departments", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setDepartments(res.data.departments);
-      } catch (err) {
-        setError("Failed to load departments");
-      }
-    };
-
-    // Fetch admin requests for current user (if deptAdmin or others)
-    const fetchRequests = async () => {
-      try {
-        const res = await api.get("/admin/requests", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setRequests(res.data.requests);
-      } catch (err) {
-        // Can ignore if no requests
-      }
-    };
-
-    fetchUsers();
-    fetchDepartments();
-    fetchRequests();
-
-    setLoading(false);
+    fetchData();
   }, [token, user]);
 
   const handleSendRequest = async () => {
     if (!selectedUserId || !selectedDeptId) {
-      alert("Please select user and department");
+      alert("Please select both user and department.");
       return;
     }
-
     try {
-      await api.post(
-        "/admin/requests",
-        {
-          targetUserId: selectedUserId,
-          departmentId: selectedDeptId,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Admin request sent successfully");
+      await api.post("/admin/requests", { targetUserId: selectedUserId, departmentId: selectedDeptId }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Admin request sent successfully.");
     } catch {
-      alert("Failed to send admin request");
+      alert("Failed to send admin request.");
     }
   };
 
   const handleRequestResponse = async (requestId, action) => {
     setRequestProcessingId(requestId);
     try {
-      await api.post(
-        `/admin/requests/${requestId}/respond`,
-        { action },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/admin-settings/requests/${requestId}/respond`, { action }, { headers: { Authorization: `Bearer ${token}` } });
+      setRequests((prev) => prev.filter((r) => r._id !== requestId));
       alert(`Request ${action}ed`);
-      // Refresh requests
-      const res = await api.get("/admin/requests", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRequests(res.data.requests);
     } catch {
-      alert("Failed to process request");
+      alert("Failed to process request.");
     } finally {
       setRequestProcessingId(null);
     }
   };
 
-  if (!user) return null; // Or loading spinner
+  if (loading) return <p className="text-center py-10 text-gray-600">Loading...</p>;
+  if (error) return <p className="text-center py-10 text-red-600">{error}</p>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto bg-white rounded shadow mt-8">
-      <h2 className="text-2xl font-semibold mb-6">Manage Admin Settings</h2>
+    <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
+      <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Admin Settings</h2>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-4">Assign Department Admin</h3>
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
+      {/* Assign Department Admin */}
+      <section className="mb-10">
+        <h3 className="text-xl font-semibold mb-4 text-gray-700">Assign Department Admin</h3>
+        <div className="flex flex-col md:flex-row gap-4">
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="border rounded p-2 flex-1"
+            className="border border-gray-300 rounded-md p-3 flex-1 focus:outline-blue-500"
           >
             <option value="">Select User</option>
             {allUsers.map((u) => (
@@ -143,7 +106,7 @@ const AdminSettings = () => {
           <select
             value={selectedDeptId}
             onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="border rounded p-2 flex-1"
+            className="border border-gray-300 rounded-md p-3 flex-1 focus:outline-blue-500"
           >
             <option value="">Select Department</option>
             {departments.map((d) => (
@@ -155,52 +118,49 @@ const AdminSettings = () => {
 
           <button
             onClick={handleSendRequest}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 text-white rounded-md px-6 py-3 hover:bg-blue-700 transition duration-200 font-semibold"
           >
             Send Request
           </button>
         </div>
       </section>
 
+      {/* Pending Admin Requests */}
       <section>
-        <h3 className="text-xl font-semibold mb-4">Pending Admin Requests</h3>
-
-        {requests.length === 0 && <p>No pending requests</p>}
-
-        {requests.length > 0 && (
-          <table className="table-auto w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-4 py-2">From</th>
-                <th className="border px-4 py-2">Department</th>
-                <th className="border px-4 py-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((req) => (
-                <tr key={req._id} className="hover:bg-gray-50">
-                  <td className="border px-4 py-2">{req.sender.name} ({req.sender.email})</td>
-                  <td className="border px-4 py-2">{req.department.name}</td>
-                  <td className="border px-4 py-2 space-x-2">
-                    <button
-                      onClick={() => handleRequestResponse(req._id, "accept")}
-                      disabled={requestProcessingId === req._id}
-                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleRequestResponse(req._id, "reject")}
-                      disabled={requestProcessingId === req._id}
-                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <h3 className="text-xl font-semibold mb-4 text-gray-700">Pending Admin Requests</h3>
+        {requests.length === 0 ? (
+          <p className="text-gray-600">No pending requests.</p>
+        ) : (
+          <div className="space-y-4">
+            {requests.map((req) => (
+              <div
+                key={req._id}
+                className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border border-gray-300 rounded-md hover:shadow"
+              >
+                <div className="mb-3 md:mb-0">
+                  <span className="font-semibold text-gray-800">{req.sender.name}</span>{" "}
+                  <span className="text-gray-500">&rarr;</span>{" "}
+                  <span className="font-medium text-blue-600">{req.department.name}</span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    disabled={requestProcessingId === req._id}
+                    onClick={() => handleRequestResponse(req._id, "accept")}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    disabled={requestProcessingId === req._id}
+                    onClick={() => handleRequestResponse(req._id, "reject")}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
     </div>
