@@ -9,7 +9,6 @@ const Signup = () => {
     email: "",
     password: "",
     role: "user",
-    joinCode: "",
   });
   const [error, setError] = useState("");
 
@@ -26,10 +25,7 @@ const Signup = () => {
     e.preventDefault();
     setError("");
     try {
-      const payload = form.role === "user"
-        ? form
-        : { name: form.name, email: form.email, password: form.password, role: form.role };
-      await api.post("/auth/signup", payload);
+      await api.post("/auth/signup", form);
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
@@ -83,17 +79,7 @@ const Signup = () => {
               </option>
             ))}
           </select>
-          {form.role === "user" && (
-            <input
-              type="text"
-              name="joinCode"
-              placeholder="Department Join Code"
-              value={form.joinCode}
-              onChange={handleChange}
-              className="border p-3 w-full rounded-lg"
-              required
-            />
-          )}
+
           <button
             type="submit"
             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition"
@@ -101,6 +87,7 @@ const Signup = () => {
             Sign Up
           </button>
         </form>
+
         <p className="text-center mt-6 text-gray-600">
           Already have an account?{" "}
           <Link to="/login" className="text-green-600 font-semibold hover:underline">

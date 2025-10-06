@@ -9,30 +9,17 @@ const { authMiddleware } = require("../middleware/authMiddleware");
 // ===================== SIGNUP =====================
 router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, role, joinCode } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password || !role)
       return res.status(400).json({ message: "Required fields missing" });
 
-    let orgId = null;
-
-    if (role === "user") {
-      if (!joinCode)
-        return res.status(400).json({ message: "Join code is required for user role" });
-
-      const department = await Organization.findOne({ joinCode, type: "department" });
-      if (!department)
-        return res.status(400).json({ message: "Invalid join code" });
-
-      orgId = department._id;
-    } else {
-      if (joinCode)
-        return res.status(400).json({ message: "Join code not allowed for admin roles" });
-    }
-
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
+
+    // 🔹 (Later) We'll handle joinCode logic here when you enable it
+    const orgId = null; // For now, users are not assigned automatically
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
@@ -42,6 +29,7 @@ router.post("/signup", async (req, res) => {
 
     res.status(201).json({ message: "User created successfully" });
   } catch (error) {
+    console.error("Signup error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
@@ -61,7 +49,6 @@ router.post("/login", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    // JWT payload
     const payload = { userId: user._id, role: user.role };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 
@@ -91,7 +78,6 @@ router.get("/me", authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.userId).select("-passwordHash");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Build organization hierarchy
     let orgHierarchy = [];
     let currentOrgId = user.orgId;
 

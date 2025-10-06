@@ -66,8 +66,8 @@ const Home = () => {
       if (action === "approve" && data.user) {
         setUser(data.user);
       }
-    } catch {
-      alert("Failed to respond. Try again.");
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to respond. Try again.");
     }
   };
 
@@ -134,14 +134,11 @@ const Home = () => {
             </h2>
             <div className="space-y-4">
               {adminRequests.map((r) => (
-                <div
-                  key={r._id}
-                  className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex justify-between items-center"
-                >
+                <div key={r._id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex justify-between items-center">
                   <div className="text-gray-700">
                     <p>
-                      <strong>{r.sender.name}</strong> wants you to be admin for{" "}
-                      <strong>{r.department.name}</strong>
+                      <strong>{r.sender?.name || "Unknown"}</strong> wants you to be admin for{" "}
+                      <strong>{r.departmentId?.name || r.orgId?.name || "N/A"}</strong>
                     </p>
                   </div>
                   <div className="space-x-2">
@@ -176,7 +173,6 @@ const Home = () => {
                   key={r._id}
                   className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex justify-between items-center"
                 >
-                  {/* Message varies by request type */}
                   <div className="text-gray-700 space-y-1">
                     <p>
                       <strong>{r.sender?.name || "Someone"}</strong> sent you a <span className="capitalize">{r.type}</span> request for{" "}

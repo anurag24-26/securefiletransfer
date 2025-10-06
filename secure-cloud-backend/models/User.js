@@ -12,7 +12,11 @@ const mongoose = require("mongoose");
         default: "user",
       },
       orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null, index: true },
-      joinCode: { type: String, unique: true }, // e.g., invitation code per user
+      joinCode: {
+      type: String,
+      index: true, // optional for lookup, no unique constraint
+      default: null,
+    },
     },
     { timestamps: true }
   );

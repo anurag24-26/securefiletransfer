@@ -6,9 +6,7 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { authMiddleware, authorizeRoles } = require("../middleware/authMiddleware");
 
-/* ---------------------------------------------
-   🧩 Unified Request Schema
-   --------------------------------------------- */
+/* --------------------- Request Schema --------------------- */
 const requestSchema = new mongoose.Schema(
   {
     type: {
@@ -16,22 +14,14 @@ const requestSchema = new mongoose.Schema(
       enum: ["join", "admin", "roleChange"],
       required: true,
     },
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    targetUser: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    targetUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     email: { type: String, lowercase: true, trim: true },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
     requestedRole: {
       type: String,
       enum: ["user", "deptAdmin", "orgAdmin", "superAdmin"],
-      required: true,
       default: "user",
     },
     message: { type: String, default: "" },
@@ -47,73 +37,53 @@ const requestSchema = new mongoose.Schema(
 
 const Request = mongoose.model("Request", requestSchema);
 
-/* ---------------------------------------------
-   🧭 Utility function — get all nested orgIds
-   --------------------------------------------- */
+/* --------------------- Helper to fetch all orgIds --------------------- */
 async function getAllOrgIds(orgId) {
   const ids = [orgId];
   const children = await Organization.find({ parentId: orgId });
-  for (const child of children) {
-    ids.push(...(await getAllOrgIds(child._id)));
-  }
+  for (const child of children) ids.push(...(await getAllOrgIds(child._id)));
   return ids;
 }
 
-/* ---------------------------------------------
-   📨 Create a new Request
-   --------------------------------------------- */
+/* --------------------- Create Request --------------------- */
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { type, targetUser, email, orgId, departmentId, requestedRole, message } = req.body;
-
-    if (!type || !requestedRole)
-      return res.status(400).json({ message: "Type and requestedRole are required" });
-
     const sender = await User.findById(req.user.userId);
     if (!sender) return res.status(404).json({ message: "Sender not found" });
 
-    if (type === "join" && (!email || !orgId)) {
-      return res.status(400).json({ message: "Email and orgId required for join request" });
-    }
-
-    if (type === "admin" && (!targetUser || !departmentId)) {
-      return res.status(400).json({ message: "targetUser and departmentId required for admin request" });
-    }
+    if (type === "admin" && (!targetUser || !departmentId))
+      return res.status(400).json({ message: "targetUser and departmentId required" });
 
     const existingRequest = await Request.findOne({
       type,
-      email: email || undefined,
-      targetUser: targetUser || undefined,
-      orgId: orgId || undefined,
-      departmentId: departmentId || undefined,
+      targetUser,
+      departmentId,
       status: "pending",
     });
 
     if (existingRequest)
-      return res.status(409).json({ message: "A similar pending request already exists" });
+      return res.status(409).json({ message: "Similar request already pending" });
 
-    const newRequest = new Request({
+    const newReq = new Request({
       type,
       sender: sender._id,
       targetUser,
       email,
       orgId,
       departmentId,
-      requestedRole,
+      requestedRole: requestedRole || "deptAdmin",
       message,
-      status: "pending",
     });
 
-    await newRequest.save();
-    res.status(201).json({ message: "Request created successfully", request: newRequest });
+    await newReq.save();
+    res.status(201).json({ message: "Request created successfully", request: newReq });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-/* ---------------------------------------------
-   📋 Get all pending requests (for admins)
-   --------------------------------------------- */
+/* --------------------- Fetch Pending Requests (Admins) --------------------- */
 router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.userId);
@@ -121,16 +91,13 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
 
     let orgIds = [];
     if (currentUser.role === "superAdmin") {
-      orgIds = (await Organization.find()).map(o => o._id);
+      orgIds = (await Organization.find()).map((o) => o._id);
     } else if (currentUser.orgId) {
       orgIds = await getAllOrgIds(currentUser.orgId);
     }
 
     const requests = await Request.find({
-      $or: [
-        { orgId: { $in: orgIds } },
-        { departmentId: { $in: orgIds } },
-      ],
+      $or: [{ orgId: { $in: orgIds } }, { departmentId: { $in: orgIds } }],
       status: "pending",
     })
       .populate("sender", "name email role")
@@ -139,119 +106,160 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
       .populate("departmentId", "name type")
       .sort({ createdAt: -1 });
 
-    res.json({ count: requests.length, requests });
+    res.json({ requests });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-/* ---------------------------------------------
-   ✅ Approve or ❌ Reject a request
-   --------------------------------------------- */
-router.post("/:id/action", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action } = req.body;
+/* --------------------- Approve / Reject Request --------------------- */
+router.post("/:id/action", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
 
-    if (!["approve", "reject"].includes(action))
-      return res.status(400).json({ message: "Invalid action" });
+    if (!["approve", "reject"].includes(action))
+      return res.status(400).json({ message: "Invalid action" });
 
-    const request = await Request.findById(id);
-    if (!request || request.status !== "pending")
-      return res.status(404).json({ message: "Request not found or already processed" });
+    const request = await Request.findById(id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
 
-    if (action === "reject") {
-      request.status = "rejected";
-      request.processedAt = new Date();
-      await request.save();
-      return res.json({ message: "Request rejected" });
-    }
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser) return res.status(404).json({ message: "Current user not found" });
 
-    // ---- APPROVE LOGIC ----
-    if (request.type === "join") {
-      let user = await User.findOne({ email: request.email });
-      if (!user) {
-        user = new User({
-          email: request.email,
-          orgId: request.orgId,
-          role: request.requestedRole,
-        });
-      } else {
-        user.orgId = request.orgId;
-        user.role = request.requestedRole;
-      }
-      await user.save();
-    } else if (request.type === "admin") {
-      const target = await User.findById(request.targetUser);
-      if (!target) return res.status(404).json({ message: "Target user not found" });
+    // PERMISSION LOGIC
+    let allowed = false;
+    // 1. Check if admin over org/dept branch
+    if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
+      let orgIds = [];
+      if (currentUser.role === "superAdmin") {
+        orgIds = (await Organization.find()).map((o) => o._id.toString());
+      } else if (currentUser.orgId) {
+        orgIds = await getAllOrgIds(currentUser.orgId);
+        orgIds = orgIds.map((id) => id.toString());
+      }
+      const reqOrg = request.orgId ? request.orgId.toString() : null;
+      const reqDept = request.departmentId ? request.departmentId.toString() : null;
+      if ((reqOrg && orgIds.includes(reqOrg)) || (reqDept && orgIds.includes(reqDept)))
+        allowed = true;
+    }
+    // 2. Check if user is the actual invitee/target
+    if (
+      (request.targetUser && request.targetUser.toString() === currentUser._id.toString()) ||
+      (request.email && request.email === currentUser.email)
+    ) {
+      allowed = true;
+    }
+    if (!allowed)
+      return res.status(403).json({ message: "Forbidden: You are not allowed to manage this request" });
 
-      target.role = "deptAdmin";
-      target.orgId = request.departmentId;
-      await target.save();
-    } else if (request.type === "roleChange") {
-      const target = await User.findById(request.targetUser);
-      if (!target) return res.status(404).json({ message: "User not found" });
+    // -------- PROCESS REQUEST ---------
+    if (action === "reject") {
+      request.status = "rejected";
+      request.processedAt = new Date();
+      await request.save();
+      return res.json({ message: "Request rejected" });
+    }
 
-      target.role = request.requestedRole;
-      await target.save();
-    }
+    // Approve request (only for properly permitted user)
+    if (request.type === "admin") {
+      const target = await User.findById(request.targetUser);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+      target.role = "deptAdmin";
+      target.orgId = request.departmentId;
+      await target.save();
+    } else if (request.type === "join") {
+      let user = await User.findOne({ email: request.email });
+      if (user) {
+        user.orgId = request.orgId;
+        user.role = request.requestedRole;
+      } else {
+        user = new User({
+          email: request.email,
+          orgId: request.orgId,
+          role: request.requestedRole,
+        });
+      }
+      await user.save();
+    } else if (request.type === "roleChange") {
+      const target = await User.findById(request.targetUser);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+      target.role = request.requestedRole;
+      await target.save();
+    }
 
-    request.status = "approved";
-    request.processedAt = new Date();
-    await request.save();
-
-    res.json({ message: "Request approved successfully", request });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+    request.status = "approved";
+    request.processedAt = new Date();
+    await request.save();
+    res.json({ message: "Request processed", request });
+  } catch (error) {
+    console.error("Action request error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
-/* ---------------------------------------------
-   🧠 Get users under current admin’s org/dept
-   --------------------------------------------- */
+/* --------------------- Get All Users under Admin’s Org --------------------- */
 router.get("/users/list", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId);
-    if (!currentUser) return res.status(404).json({ message: "User not found" });
+    const admin = await User.findById(req.user.userId);
+    if (!admin) return res.status(404).json({ message: "User not found" });
 
     let users = [];
-
-    if (currentUser.role === "superAdmin") {
+    if (admin.role === "superAdmin") {
       users = await User.find().populate("orgId", "name");
-    } else if (currentUser.role === "orgAdmin") {
-      const orgIds = await getAllOrgIds(currentUser.orgId);
+    } else if (admin.role === "orgAdmin") {
+      const orgIds = await getAllOrgIds(admin.orgId);
       users = await User.find({ orgId: { $in: orgIds } }).populate("orgId", "name");
-    } else if (currentUser.role === "deptAdmin") {
-      users = await User.find({ orgId: currentUser.orgId }).populate("orgId", "name");
+    } else if (admin.role === "deptAdmin") {
+      users = await User.find({ orgId: admin.orgId }).populate("orgId", "name");
     }
 
-    res.json({ count: users.length, users });
+    res.json({ users });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
 
-// GET requests targeted to current user (directly or by email)
+// Fetch departments visible to current admin (for promotion UI)
+router.get("/departments/list", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.userId);
+    if (!admin) return res.status(404).json({ message: "User not found" });
+
+    let filter = { type: "department" };
+
+    if (admin.role === "superAdmin") {
+      // Can see all departments
+      // filter stays as { type: "department" }
+    } else if (admin.role === "orgAdmin") {
+      filter.parentId = admin.orgId;
+    } else if (admin.role === "deptAdmin") {
+      filter._id = admin.orgId;
+    }
+
+    const departments = await Organization.find(filter).select("_id name type parentId");
+    res.json({ departments });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+
+/* --------------------- My Requests (for normal users) --------------------- */
 router.get("/my-requests", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // Find requests either by targetUser or by email (if email stored)
     const requests = await Request.find({
       status: "pending",
-      $or: [
-        { targetUser: user._id },
-        { email: user.email }
-      ]
+      $or: [{ targetUser: user._id }, { email: user.email }],
     })
-    .populate("sender", "name email role")
-    .populate("orgId", "name type")
-    .populate("departmentId", "name type")
-    .sort({ createdAt: -1 });
+      .populate("sender", "name email role")
+      .populate("orgId", "name")
+      .populate("departmentId", "name")
+      .sort({ createdAt: -1 });
 
-    res.json({ count: requests.length, requests });
+    res.json({ requests });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

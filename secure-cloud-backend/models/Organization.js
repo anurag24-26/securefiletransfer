@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 
 const organizationSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     type: {
       type: String,
       enum: ["university", "hospital", "business", "department"],
@@ -13,10 +17,11 @@ const organizationSchema = new mongoose.Schema(
       ref: "Organization",
       default: null,
       validate: {
-        validator: async function(value) {
+        validator: async function (value) {
           if (!value) return true; // allow null
           if (value.equals(this._id)) return false; // cannot be own parent
-          // Additional: verify referenced org exists
+
+          // Ensure referenced organization exists
           const org = await this.model("Organization").findById(value);
           return !!org;
         },
@@ -25,19 +30,32 @@ const organizationSchema = new mongoose.Schema(
     },
     joinCode: {
       type: String,
-      unique: true,
-      sparse: true,
-      index: true,
+      index: true, // keep it indexed for searching
+      default: null,
     },
-    // Allow multiple admins per organization
     admins: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", default: null
+        ref: "User",
+      },
+    ],
+    // ✅ Add members array to track users
+    members: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
       },
     ],
   },
   { timestamps: true }
 );
+
+// Optional: automatically generate a joinCode if missing
+organizationSchema.pre("save", function (next) {
+  if (!this.joinCode) {
+    this.joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+  next();
+});
 
 module.exports = mongoose.model("Organization", organizationSchema);

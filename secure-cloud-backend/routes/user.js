@@ -66,58 +66,132 @@ router.get(
   }
 );
 
-router.get(
-  "/my-org-info",
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.user.userId);
-      if (!user || !user.orgId) return res.status(404).json({ message: "No organization assigned" });
+// ✅ GET - Fetch user's org info
+router.get("/my-org-info", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-      async function getAllOrgIds(orgId) {
-        const ids = [orgId];
-        const children = await Organization.find({ parentId: orgId });
-        for (const child of children) {
-          ids.push(...(await getAllOrgIds(child._id)));
-        }
-        return ids;
-      }
-
-      const orgIds = await getAllOrgIds(user.orgId);
-
-      const org = await Organization.findById(user.orgId).select('name type parentId joinCode');
-
-      const admins = await User.find({
-        orgId: { $in: orgIds },
-        role: { $regex: "Admin$", $options: "i" } // roles ending with Admin (superAdmin, orgAdmin, deptAdmin)
-      }).select("name email role");
-
-      let parentName = null;
-      if (org.parentId) {
-        const parent = await Organization.findById(org.parentId).select("name");
-        parentName = parent?.name || null;
-      }
-
-      res.json({
-        organization: {
-          id: org._id,
-          name: org.name,
-          type: org.type,
-          parent: parentName,
-          joinCode: org.joinCode,
-          admins: admins.map(a => ({
-            id: a._id,
-            name: a.name,
-            email: a.email,
-            role: a.role
-          })),
-        }
+    // If user not assigned to any organization
+    if (!user.orgId) {
+      return res.status(404).json({
+        message: "No organization assigned",
+        allowJoin: true,
       });
-    } catch (error) {
-      console.error("Fetch my org info error:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
     }
+
+    // Recursively fetch all child org IDs (hierarchical)
+    async function getAllOrgIds(orgId) {
+      const ids = [orgId];
+      const children = await Organization.find({ parentId: orgId });
+      for (const child of children) {
+        ids.push(...(await getAllOrgIds(child._id)));
+      }
+      return ids;
+    }
+
+    const orgIds = await getAllOrgIds(user.orgId);
+
+    const org = await Organization.findById(user.orgId).select(
+      "name type parentId joinCode"
+    );
+
+    const admins = await User.find({
+      orgId: { $in: orgIds },
+      role: { $regex: "Admin$", $options: "i" }, // e.g. orgAdmin, deptAdmin
+    }).select("name email role");
+
+    let parentName = null;
+    if (org.parentId) {
+      const parent = await Organization.findById(org.parentId).select("name");
+      parentName = parent?.name || null;
+    }
+
+    res.json({
+      organization: {
+        id: org._id,
+        name: org.name,
+        type: org.type,
+        parent: parentName,
+        joinCode: org.joinCode,
+        admins: admins.map((a) => ({
+          id: a._id,
+          name: a.name,
+          email: a.email,
+          role: a.role,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Fetch my org info error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-);
+});
+
+// ✅ POST - Join organization by joinCode
+router.post("/join-org", authMiddleware, async (req, res) => {
+  try {
+    const { joinCode } = req.body;
+    if (!joinCode) return res.status(400).json({ message: "Join code required" });
+
+    const org = await Organization.findOne({ joinCode });
+    if (!org) return res.status(404).json({ message: "Invalid join code" });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update user orgId
+    user.orgId = org._id;
+    await user.save();
+
+    // Add user to members list
+    if (!org.members.includes(user._id)) {
+      org.members.push(user._id);
+      await org.save();
+    }
+
+    res.json({
+      message: `Successfully joined ${org.name}`,
+      organization: org,
+    });
+  } catch (error) {
+    console.error("Join organization error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// ✅ POST - Leave organization (for current logged-in user)
+router.post("/leave-org", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.orgId) {
+      return res.status(400).json({ message: "You are not assigned to any organization" });
+    }
+
+    if (user.role && user.role.toLowerCase().includes("admin")) {
+      return res.status(403).json({ message: "Admins cannot leave. Please contact another admin or downgrade your role first." });
+    }
+
+    // Remove user from org's members array if present
+    const org = await Organization.findById(user.orgId);
+    if (org && Array.isArray(org.members)) {
+      org.members = org.members.filter(
+        (u) => u.toString() !== user._id.toString()
+      );
+      await org.save();
+    }
+
+    // Remove orgId from user
+    user.orgId = undefined;
+    await user.save();
+
+    res.json({ message: "Successfully left the organization" });
+  } catch (error) {
+    console.error("Leave org error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 
 module.exports = router;

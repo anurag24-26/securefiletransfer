@@ -16,12 +16,12 @@ const AdminSettings = () => {
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(null);
 
+  // Redirect if not logged in
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-    }
+    if (!token) navigate("/login");
   }, [token, navigate]);
 
+  // Fetch all necessary data
   useEffect(() => {
     if (!token || !user) return;
 
@@ -29,17 +29,19 @@ const AdminSettings = () => {
       setLoading(true);
       setError(null);
 
+      // Only admins can access
       if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
         navigate("/");
         return;
       }
 
       try {
+        // 🧩 Get all users, orgs, and pending requests
         const [usersRes, deptRes, reqRes] = await Promise.all([
-          api.get("/admin/users/emails", {
+          api.get("/requests/users/list", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          api.get("/admin/departments", {
+          api.get("/requests/departments/list", {
             headers: { Authorization: `Bearer ${token}` },
           }),
           api.get("/requests", {
@@ -60,27 +62,32 @@ const AdminSettings = () => {
     fetchData();
   }, [token, user, navigate]);
 
+  // 📤 Send admin promotion request
   const handleSendRequest = async () => {
     if (!selectedUserId || !selectedDeptId) {
       alert("Please select both user and department.");
       return;
     }
+
     try {
       await api.post(
         "/requests",
         {
-          targetUserId: selectedUserId,
+          type: "admin",
+          targetUser: selectedUserId,
           departmentId: selectedDeptId,
-          requestType: "admin", // 🔹 explicitly mark this as admin request
+          requestedRole: "deptAdmin",
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       alert("Admin request sent successfully.");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to send admin request.");
     }
   };
 
+  // ✅ Handle approve/reject request
   const handleRequestResponse = async (requestId, action) => {
     setProcessing(requestId);
     try {
@@ -89,6 +96,7 @@ const AdminSettings = () => {
         { action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setRequests((prev) => prev.filter((r) => r._id !== requestId));
       alert(`Request ${action}ed successfully.`);
     } catch (err) {
@@ -122,7 +130,7 @@ const AdminSettings = () => {
           >
             <option value="">Select User</option>
             {allUsers.map((u) => (
-              <option key={u.id} value={u.id}>
+              <option key={u._id} value={u._id}>
                 {u.name} ({u.email})
               </option>
             ))}
@@ -166,14 +174,16 @@ const AdminSettings = () => {
               >
                 <div className="mb-3 md:mb-0">
                   <span className="font-semibold text-gray-800">
-                    {req.requestedBy?.name || req.sender?.name || "Unknown"}
+                    {req.sender?.name || "Unknown"}
                   </span>{" "}
                   <span className="text-gray-500">&rarr;</span>{" "}
                   <span className="font-medium text-blue-600">
-                    {req.orgId?.name || req.department?.name || "N/A"}
+                    {req.departmentId?.name ||
+                      req.orgId?.name ||
+                      "Unassigned"}
                   </span>{" "}
                   <span className="ml-2 text-gray-600 text-sm">
-                    ({req.requestType})
+                    ({req.type})
                   </span>
                 </div>
                 <div className="flex gap-3">
