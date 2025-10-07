@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import logo from "../assets/logo.jpg";
 
 const Navbar = () => {
   const { user, token, logout } = useAuth();
@@ -40,12 +41,19 @@ const Navbar = () => {
     <nav className="fixed top-0 w-full bg-gradient-to-r from-[#0a0f1f] via-[#1a2235] to-[#0f172a] backdrop-blur-md shadow-lg z-50 border-b border-cyan-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo */}
+          {/* Logo + Brand Name */}
           <Link
             to="/"
-            className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.6)] transition-transform duration-300"
+            className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300"
           >
-            SecureCloud
+            <img
+              src={logo}
+              alt="SkyCryptVault Logo"
+              className="h-10 w-10 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+            />
+            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]">
+              Crypterra
+            </span>
           </Link>
 
           {/* Desktop Menu */}
