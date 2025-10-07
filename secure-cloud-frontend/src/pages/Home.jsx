@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
-
+import Loader from "../components/Loader";
 const Home = () => {
   const { user, token, logout, setUser } = useAuth();
   const navigate = useNavigate();
@@ -73,9 +73,9 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-gray-500 text-lg">Loading...</p>
-      </div>
+    <>
+    <Loader/>
+    </>
     );
   }
 

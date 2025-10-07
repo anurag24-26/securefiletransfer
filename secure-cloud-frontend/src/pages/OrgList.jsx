@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import Loader from "../components/Loader";
 const OrgList = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -217,9 +217,9 @@ const OrgList = () => {
   // Loading or Error State for orgs
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600 text-lg">Loading organizations...</p>
-      </div>
+      <>
+    <Loader/>
+    </>
     );
   }
 

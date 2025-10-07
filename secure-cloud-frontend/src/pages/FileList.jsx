@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
-
+import Loader from "../components/Loader";
 const FileList = () => {
   const { token, user } = useAuth();
   const [files, setFiles] = useState([]);
@@ -37,15 +37,21 @@ const FileList = () => {
     }
   };
 
-  if (loading)
-    return <div className="p-4 text-center">Loading files...</div>;
-
-  if (error)
+  if (loading) {
     return (
-      <div className="p-4 text-center text-red-600">
-        {error}
+      <>
+    <Loader/>
+    </>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500 text-lg">{error}</p>
       </div>
     );
+  }
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
