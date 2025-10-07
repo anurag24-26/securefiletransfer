@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-import { HiOutlineBuildingLibrary, HiOutlineUserGroup, HiOutlineIdentification, HiOutlineMail, HiOutlineXCircle, HiOutlineUserCircle } from "react-icons/hi2";
+
+import {
+  HiOutlineMail,
+  HiOutlineXCircle,
+  HiOutlineUserCircle,
+} from "react-icons/hi";
+
+import {
+  HiOutlineBuildingLibrary,
+  HiOutlineUserGroup,
+  HiOutlineIdentification,
+} from "react-icons/hi2";
+
 
 const MyOrganization = () => {
   const { token, setUser } = useAuth();
