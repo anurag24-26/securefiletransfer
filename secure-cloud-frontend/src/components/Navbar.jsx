@@ -19,7 +19,8 @@ const Navbar = () => {
   const commonLinks = [
     { to: "/", label: "Home" },
     { to: "/myOrganization", label: "My Organization" },
-    { to: "/filelist", label: "Files" },
+    { to: "/filelist", label: "Upload" },
+    { to: "/yourfiles", label: "Files" },
   ];
 
   const authLinks = [

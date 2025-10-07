@@ -1,102 +1,51 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
-import Loader from "../components/Loader";
-const FileList = () => {
-  const { token, user } = useAuth();
+
+const VisibleFiles = () => {
+  const { token } = useAuth();
   const [files, setFiles] = useState([]);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
-
     const fetchFiles = async () => {
       try {
-        const res = await api.get("/files/", {
+        const res = await api.get("/files/visible-files", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setFiles(res.data.files || []);
-      } catch {
-        setError("Failed to load files.");
+        setFiles(res.data.files);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchFiles();
   }, [token]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this file?")) return;
-    try {
-      await api.delete(`/files/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setFiles(files.filter((file) => file._id !== id));
-    } catch {
-      alert("Failed to delete file.");
-    }
+  const handleDownload = (filename) => {
+    const link = document.createElement("a");
+    link.href = `${process.env.REACT_APP_API_URL}/uploads/${filename}`;
+    link.download = filename;
+    link.click();
   };
 
-  if (loading) {
-    return (
-      <>
-    <Loader/>
-    </>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500 text-lg">{error}</p>
-      </div>
-    );
-  }
+  if (loading) return <p className="text-white text-center mt-10">Loading files...</p>;
+  if (!files.length) return <p className="text-white text-center mt-10">No files visible to you.</p>;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Uploaded Files</h2>
-      {files.length === 0 ? (
-        <p>No files uploaded yet.</p>
-      ) : (
-        <table className="w-full border-collapse border">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="border p-2 text-left">Filename</th>
-              <th className="border p-2 text-left">Original Name</th>
-              <th className="border p-2 text-left">Organization</th>
-              <th className="border p-2 text-left">Uploaded By</th>
-              <th className="border p-2 text-left">Encrypted</th>
-              <th className="border p-2 text-left">Expiry Date</th>
-              <th className="border p-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {files.map((file) => (
-              <tr key={file._id} className="hover:bg-gray-100">
-                <td className="border p-2">{file.filename}</td>
-                <td className="border p-2">{file.originalName}</td>
-                <td className="border p-2">{file.orgId?.name || "-"}</td>
-                <td className="border p-2">{file.uploadedBy?.name || "-"}</td>
-                <td className="border p-2">{file.encrypted ? "Yes" : "No"}</td>
-                <td className="border p-2">{file.expiryDate ? new Date(file.expiryDate).toLocaleDateString() : "-"}</td>
-                <td className="border p-2">
-                  {(user.role === "superAdmin" || file.uploadedBy?._id === user.id) && (
-                    <button
-                      onClick={() => handleDelete(file._id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {files.map(file => (
+        <div key={file._id} className="bg-slate-800 text-gray-200 p-4 rounded shadow border border-slate-700">
+          <h3 className="font-semibold mb-1">{file.originalName}</h3>
+          <p><strong>Type:</strong> {file.type || "N/A"}</p>
+          <p><strong>Uploaded By:</strong> {file.uploadedBy.name}</p>
+          <p><strong>Visible Type:</strong> {file.visibleToType}</p>
+          <button onClick={() => handleDownload(file.filename)} className="mt-2 w-full bg-blue-600 hover:bg-blue-700 py-1 rounded text-white">Download</button>
+        </div>
+      ))}
     </div>
   );
 };
 
-export default FileList;
+export default VisibleFiles;
