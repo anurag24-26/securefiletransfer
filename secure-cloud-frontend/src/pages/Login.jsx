@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import bgImage from "../assets/bg.jpg";
 
 const Login = () => {
   const { login, loading, error } = useAuth();
@@ -16,68 +17,123 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center"
+      className="min-h-screen flex items-center justify-center relative bg-cover bg-center"
       style={{
-        background: "linear-gradient(90deg, #0f2027 0%, #2c5364 100%)",
-        minHeight: "100vh",
+        backgroundImage: `url(${bgImage})`,
       }}
     >
-      <div className="shadow-2xl rounded-2xl p-8 max-w-md w-full"
-        style={{
-          background: "rgba(23, 27, 56, 0.97)",
-          boxShadow: "0 4px 32px rgba(16,22,36,0.5)",
-          border: "1px solid #29334d"
-        }}
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[4px]" />
+
+      {/* Login Card */}
+      <div
+        className="relative z-10 w-full max-w-md p-10 sm:p-12 rounded-2xl shadow-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-md"
       >
+        {/* Title */}
         <h2
-          className="text-3xl font-bold mb-6 text-center"
+          className="text-4xl font-extrabold mb-2 text-center tracking-tight"
           style={{
-            background: "linear-gradient(90deg, #21d4fd 0%, #b721ff 100%)",
+            background: "linear-gradient(90deg, #00e0ff, #b721ff)",
             WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent"
+            WebkitTextFillColor: "transparent",
           }}
         >
-          Login
+          Crypterra
         </h2>
-        {error && <div className="text-red-500 mb-4 text-center">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border p-3 w-full rounded-lg focus:outline-blue-400 text-gray-100 bg-slate-800 border-slate-700 
-    transition duration-300 ease-in-out
-    hover:bg-slate-700 hover:border-cyan-400"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border p-3 w-full rounded-lg focus:outline-blue-400 text-gray-100 bg-slate-800 border-slate-700 
-    transition duration-300 ease-in-out
-    hover:bg-slate-700 hover:border-purple-400"
-          />
+        <p className="text-center text-gray-400 mb-8 text-sm">
+          Sign in to access your secure cloud dashboard
+        </p>
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-red-400 mb-4 text-center font-medium animate-pulse">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-300"
+            >
+              Email Address
+            </label>
+            <div className="relative">
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all duration-200 placeholder-gray-500"
+              />
+              <span className="absolute right-3 top-3 text-cyan-400 text-lg">
+                ✉️
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-300"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/40 transition-all duration-200 placeholder-gray-500"
+              />
+              <span className="absolute right-3 top-3 text-purple-400 text-lg">
+                🔒
+              </span>
+            </div>
+          </div>
+
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white py-3 rounded-lg font-semibold
-    transition-all duration-300 shadow-lg
-    hover:from-cyan-400 hover:to-purple-600 hover:scale-105 hover:shadow-2xl"
+            className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg
+              ${
+                loading
+                  ? "bg-slate-700 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-700 hover:scale-[1.03]"
+              }
+              text-white focus:ring-2 focus:ring-cyan-500/50`}
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-        <p className="text-center mt-6 text-gray-400">
-          Don’t have an account?{" "}
+
+        {/* Footer Links */}
+        <div className="text-center mt-8 space-y-3">
+          <p className="text-gray-400 text-sm">
+            Don’t have an account?{" "}
+            <Link
+              to="/signup"
+              className="text-cyan-400 font-semibold hover:underline hover:text-purple-400 transition"
+            >
+              Create one
+            </Link>
+          </p>
+
           <Link
-            to="/signup"
-            className="text-cyan-400 font-semibold hover:underline"
+            to="/forgot-password"
+            className="text-sm text-gray-500 hover:text-cyan-400 hover:underline"
           >
-            Sign Up
+            Forgot your password?
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
