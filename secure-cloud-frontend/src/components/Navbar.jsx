@@ -7,41 +7,43 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const activeClass = "text-blue-500 border-b-2 border-blue-500";
+  // Active link styling (neon cyan underline + glow)
+  const activeClass =
+    "relative text-cyan-400 font-semibold after:content-[''] after:absolute after:w-full after:h-[2px] after:bg-cyan-400 after:bottom-[-4px] after:left-0 drop-shadow-[0_0_8px_rgba(34,211,238,0.7)] transition-all duration-300";
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  // Links visible to all users
   const commonLinks = [
     { to: "/", label: "Home" },
- {to:"/myOrganization", label: "My Organization"},
+    { to: "/myOrganization", label: "My Organization" },
     { to: "/filelist", label: "Files" },
   ];
 
-  // Links for unauthenticated users
   const authLinks = [
     { to: "/login", label: "Login" },
     { to: "/signup", label: "Sign Up" },
   ];
 
-  // Links for authenticated users
   const userLinks = [];
 
-  // Show Admin Settings only for admins
   if (user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
-    userLinks.push({ to: "/adminSettings", label: "Admin Settings" },{   to: "/orglist", label: "Organizations" });
+    userLinks.push(
+      { to: "/adminSettings", label: "Admin Settings" },
+      { to: "/orglist", label: "Organizations" }
+    );
   }
 
   return (
-    <nav className="fixed top-0 w-full bg-white bg-opacity-30 backdrop-blur-md shadow-md z-50">
+    <nav className="fixed top-0 w-full bg-gradient-to-r from-[#0a0f1f] via-[#1a2235] to-[#0f172a] backdrop-blur-md shadow-lg z-50 border-b border-cyan-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
+          {/* Logo */}
           <Link
             to="/"
-            className="text-2xl font-black text-gray-900 hover:text-blue-600 transition"
+            className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.6)] transition-transform duration-300"
           >
             SecureCloud
           </Link>
@@ -53,8 +55,10 @@ const Navbar = () => {
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  "inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors duration-200 " +
-                  (isActive ? activeClass : "text-gray-700 hover:text-blue-500")
+                  "relative inline-flex items-center px-1 pt-1 text-sm font-medium tracking-wide transition-all duration-300 " +
+                  (isActive
+                    ? activeClass
+                    : "text-gray-300 hover:text-cyan-400 after:content-[''] after:absolute after:w-0 after:h-[2px] after:bg-cyan-400 after:bottom-[-4px] after:left-0 hover:after:w-full after:transition-all after:duration-300")
                 }
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -62,21 +66,22 @@ const Navbar = () => {
               </NavLink>
             ))}
 
+            {/* Logout Button */}
             {token && (
               <button
                 onClick={handleLogout}
-                className="ml-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                className="ml-4 bg-gradient-to-r from-red-500 via-pink-600 to-purple-600 text-white px-4 py-2 rounded-full shadow-md hover:shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all duration-300 hover:scale-105"
               >
                 Logout
               </button>
             )}
           </div>
 
-          {/* Mobile hamburger button */}
+          {/* Mobile Hamburger Button */}
           <div className="md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-300 hover:text-cyan-400 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -88,7 +93,11 @@ const Navbar = () => {
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               ) : (
                 <svg
@@ -99,7 +108,11 @@ const Navbar = () => {
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               )}
             </button>
@@ -109,17 +122,17 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white bg-opacity-40 backdrop-blur-md shadow-inner border-t border-gray-200">
+        <div className="md:hidden bg-gradient-to-b from-[#1e293b]/95 to-[#0a0f1f]/95 backdrop-blur-md shadow-inner border-t border-cyan-400/20">
           <div className="pt-2 pb-3 space-y-1">
             {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  "block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 " +
+                  "block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-all duration-200 " +
                   (isActive
-                    ? "bg-blue-100 border-blue-600 text-blue-700"
-                    : "border-transparent text-gray-700 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600")
+                    ? "bg-gray-800 border-cyan-400 text-cyan-400"
+                    : "border-transparent text-gray-300 hover:border-cyan-400 hover:bg-gray-800 hover:text-cyan-300")
                 }
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -130,7 +143,7 @@ const Navbar = () => {
             {token && (
               <button
                 onClick={handleLogout}
-                className="w-full text-left bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                className="w-full text-left bg-gradient-to-r from-red-500 via-pink-600 to-purple-600 text-white px-4 py-2 rounded-full hover:shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all duration-300 hover:scale-105"
               >
                 Logout
               </button>
