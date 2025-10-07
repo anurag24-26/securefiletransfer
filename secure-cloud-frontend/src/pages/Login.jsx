@@ -18,28 +18,18 @@ const Login = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative bg-cover bg-center"
-      style={{
-        backgroundImage: `url(${bgImage})`,
-      }}
+      style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[4px]" />
 
       {/* Login Card */}
-      <div
-        className="relative z-10 w-full max-w-md p-10 sm:p-12 rounded-2xl shadow-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-md"
-      >
+      <div className="relative z-10 w-full max-w-md p-10 sm:p-12 rounded-2xl shadow-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-md flex flex-col items-center">
+        
         {/* Title */}
-        <h2
-          className="text-4xl font-extrabold mb-2 text-center tracking-tight"
-          style={{
-            background: "linear-gradient(90deg, #00e0ff, #b721ff)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-[Orbitron] drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] hover:drop-shadow-[0_0_20px_rgba(34,211,238,0.8)] text-center mb-4">
           Crypterra
-        </h2>
+        </h1>
         <p className="text-center text-gray-400 mb-8 text-sm">
           Sign in to access your secure cloud dashboard
         </p>
@@ -52,12 +42,9 @@ const Login = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="w-full space-y-6">
           <div className="space-y-2">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-300"
-            >
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300">
               Email Address
             </label>
             <div className="relative">
@@ -70,17 +57,12 @@ const Login = () => {
                 required
                 className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all duration-200 placeholder-gray-500"
               />
-              <span className="absolute right-3 top-3 text-cyan-400 text-lg">
-                ✉️
-              </span>
+              <span className="absolute right-3 top-3 text-cyan-400 text-lg">✉️</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-300"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300">
               Password
             </label>
             <div className="relative">
@@ -93,22 +75,15 @@ const Login = () => {
                 required
                 className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/40 transition-all duration-200 placeholder-gray-500"
               />
-              <span className="absolute right-3 top-3 text-purple-400 text-lg">
-                🔒
-              </span>
+              <span className="absolute right-3 top-3 text-purple-400 text-lg">🔒</span>
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
             className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg
-              ${
-                loading
-                  ? "bg-slate-700 cursor-not-allowed"
-                  : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-700 hover:scale-[1.03]"
-              }
+              ${loading ? "bg-slate-700 cursor-not-allowed" : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-700 hover:scale-[1.03]"}
               text-white focus:ring-2 focus:ring-cyan-500/50`}
           >
             {loading ? "Logging in..." : "Login"}
