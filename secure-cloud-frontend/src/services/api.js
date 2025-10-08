@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create axios instance
 const api = axios.create({
-  baseURL: "http://localhost:5000/api", // adjust to your backend URL
+  baseURL: "https://securefiletransfer-0kub.onrender.com/api", // adjust to your backend URL
   timeout: 15000,
 });
 
