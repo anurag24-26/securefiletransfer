@@ -57,7 +57,7 @@ const Loader = () => {
         className="mt-6 text-4xl font-bold text-white drop-shadow-lg"
         style={{ fontFamily: "Orbitron, sans-serif" }}
       >
-        Cryperaa
+        Crypteraa
       </motion.h1>
 
       {/* Tagline */}
