@@ -10,6 +10,7 @@ import AdminSettings from "./pages/AdminSettings";
 import Navbar from "./components/Navbar";
 import MyOrganization from "./pages/MyOrganization";
 import VisibleFiles from "./pages/FileList";
+import Footer from "./components/Footer";
 function App() {
   return (
     <AuthProvider>
@@ -27,6 +28,7 @@ function App() {
              <Route path="/myOrganization" element={<MyOrganization />} />
           </Routes>
         </div>
+        <Footer/>
       </BrowserRouter>
     </AuthProvider>
   );

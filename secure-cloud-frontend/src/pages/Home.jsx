@@ -4,7 +4,8 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
 import bgImage from "../assets/bg.jpg"; 
-import Footer from "../components/Footer"; // ✅ Import footer
+
+// import Footer from "../components/Footer"; // ✅ Import footer
 
 const Home = () => {
   const { user, token, logout, setUser } = useAuth();
@@ -106,7 +107,7 @@ const Home = () => {
             <h1 className="text-3xl font-extrabold drop-shadow-md">
               Welcome, {user?.name ?? "User"} 👋
             </h1>
-            <button
+            {/* <button
               onClick={() => {
                 logout();
                 navigate("/login");
@@ -114,7 +115,7 @@ const Home = () => {
               className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-full shadow-md hover:shadow-red-500/30 transition-all duration-200"
             >
               Logout
-            </button>
+            </button> */}
           </div>
 
           {/* User Details */}
@@ -126,10 +127,24 @@ const Home = () => {
               <p><strong>Name:</strong> {user?.name}</p>
               <p><strong>Email:</strong> {user?.email}</p>
               <p><strong>Role:</strong> {user?.role}</p>
-              <p>
-                <strong>Organization:</strong>{" "}
-                {user?.orgHierarchy?.map((o) => o.name).join(" > ") || "—"}
-              </p>
+            <p className="flex flex-wrap items-center gap-1 text-gray-200">
+  <strong className="mr-2 text-cyan-400">Organization:</strong>
+  {user?.orgHierarchy?.length > 0 ? (
+    user.orgHierarchy.map((o, index) => (
+      <span key={o._id || index} className="flex items-center gap-1">
+        <span className="px-2 py-1 bg-slate-700/60 rounded-md text-sm text-gray-100 hover:bg-cyan-700 transition-colors duration-200">
+          {o.name}
+        </span>
+        {index < user.orgHierarchy.length - 1 && (
+          <span className="text-gray-400">→</span>
+        )}
+      </span>
+    ))
+  ) : (
+    <span className="text-gray-400">—</span>
+  )}
+</p>
+
             </div>
           </section>
 
@@ -217,8 +232,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* ✅ Footer */}
-      <Footer />
+      
     </div>
   );
 };
