@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 
-const FileUpload = () => {
+const FilesUpload = () => {
   const { token } = useAuth();
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
@@ -131,4 +131,4 @@ const FileUpload = () => {
   );
 };
 
-export default FileUpload;
+export default FilesUpload;

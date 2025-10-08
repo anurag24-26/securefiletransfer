@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
-import sideImage from "../assets/loginsideimage1.jpg";
+
+// Import two different images
+import sideImageLogin from "../assets/loginsideimage1.jpg";
+import sideImageSignup from "../assets/signup.jpg";
 import bgImage from "../assets/back1.jpg";
 
 const AuthPage = () => {
@@ -46,6 +49,9 @@ const AuthPage = () => {
 
   const toggleMode = () => setMode(mode === "login" ? "signup" : "login");
 
+  // ✅ Choose image based on mode
+  const currentSideImage = mode === "login" ? sideImageLogin : sideImageSignup;
+
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center relative overflow-hidden"
@@ -54,7 +60,7 @@ const AuthPage = () => {
       <div className="absolute inset-0 bg-black/40"></div>
 
       <div className="relative w-full max-w-5xl flex rounded-3xl shadow-2xl overflow-hidden border border-gray-200 bg-white/30 backdrop-blur-xl z-10">
-        {/* Animated Left Section (Image) */}
+        {/* Left Section (Dynamic Image + Info) */}
         <motion.div
           key={mode}
           initial={{ x: mode === "login" ? "100%" : "-100%", opacity: 0 }}
@@ -65,15 +71,15 @@ const AuthPage = () => {
             mode === "login" ? "order-2" : "order-1"
           }`}
         >
+          {/* ✅ Dynamic image */}
           <img
-            src={sideImage}
-            alt="illustration"
+            src={currentSideImage}
+            alt={mode === "login" ? "Login illustration" : "Signup illustration"}
             className="max-w-xs w-full mb-6 rounded-2xl shadow-xl transform hover:scale-105 transition duration-500"
           />
+
           <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-            {mode === "login"
-              ? "Monitor Your Projects"
-              : "Collaborate Securely"}
+            {mode === "login" ? "Monitor Your Projects" : "Collaborate Securely"}
           </h3>
           <p className="text-gray-500 text-sm max-w-sm">
             {mode === "login"
@@ -82,7 +88,7 @@ const AuthPage = () => {
           </p>
         </motion.div>
 
-        {/* Animated Right Section (Forms) */}
+        {/* Right Section (Forms) */}
         <motion.div
           key={mode + "-form"}
           initial={{ x: mode === "login" ? "-100%" : "100%", opacity: 0 }}
