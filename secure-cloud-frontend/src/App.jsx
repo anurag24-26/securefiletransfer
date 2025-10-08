@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 // import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 import OrgList from "./pages/OrgList";
-import FileList from "./pages/FilesUpload";
+import FileList from "./pages/FilesUpload ";
 import AdminSettings from "./pages/AdminSettings";
 import Navbar from "./components/Navbar";
 import MyOrganization from "./pages/MyOrganization";
