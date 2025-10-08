@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import bgImage from "../assets/back1.jpg";
-import Footer from "../components/Footer"; // ✅ Import footer
+import Footer from "../components/Footer"; //  Import footer
 
 const Login = () => {
   const { login, loading, error } = useAuth();
@@ -124,7 +124,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* ✅ Footer */}
+      {/*  Footer */}
       <Footer />
     </div>
   );
