@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
-
+import Loader from "../components/Loader";
 const AdminSettings = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -106,10 +106,21 @@ const AdminSettings = () => {
     }
   };
 
-  if (loading)
-    return <p className="text-center py-10 text-gray-600">Loading...</p>;
-  if (error)
-    return <p className="text-center py-10 text-red-600">{error}</p>;
+   if (loading) {
+    return (
+      <>
+    <Loader/>
+    </>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500 text-lg">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
