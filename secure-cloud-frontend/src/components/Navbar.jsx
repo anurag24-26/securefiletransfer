@@ -21,8 +21,8 @@ const Navbar = () => {
   ];
 
   const authLinks = [
-    { to: "/login", label: "Login" },
-    { to: "/signup", label: "Sign Up" },
+    { to: "/login", label: "Login/Signup" },
+    // { to: "/signup", label: "Sign Up" },
   ];
 
   const userLinks = [];
