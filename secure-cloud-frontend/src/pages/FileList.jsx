@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import Loader from "../components/Loader";
 
 const VisibleFiles = () => {
   const { token } = useAuth();
@@ -30,7 +31,7 @@ const VisibleFiles = () => {
     link.click();
   };
 
-  if (loading) return <p className="text-white text-center mt-10">Loading files...</p>;
+   if (loading) return <Loader />;
   if (!files.length) return <p className="text-white text-center mt-10">No files visible to you.</p>;
 
   return (

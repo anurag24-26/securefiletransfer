@@ -1,20 +1,24 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 
-// Import two different images
-import sideImageLogin from "../assets/loginsideimage1.jpg";
-import sideImageSignup from "../assets/signup.jpg";
+// Images
+import sideImageLogin from "../assets/login.svg";
+import sideImageSignup from "../assets/signup.svg";
 import bgImage from "../assets/back1.jpg";
 
 const AuthPage = () => {
   const navigate = useNavigate();
   const { login, loading, error: loginError } = useAuth();
-  const [mode, setMode] = useState("login"); // "login" or "signup"
+  const [isLogin, setIsLogin] = useState(true);
+
+  // Login form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Signup form
   const [signupData, setSignupData] = useState({
     name: "",
     email: "",
@@ -41,272 +45,216 @@ const AuthPage = () => {
     setSignupError("");
     try {
       await api.post("/auth/signup", signupData);
-      setMode("login");
+      setIsLogin(true);
     } catch (err) {
       setSignupError(err.response?.data?.message || "Signup failed");
     }
   };
 
-  const toggleMode = () => setMode(mode === "login" ? "signup" : "login");
-
-  // ✅ Choose image based on mode
-  const currentSideImage = mode === "login" ? sideImageLogin : sideImageSignup;
+  const switchMode = () => setIsLogin(!isLogin);
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center relative overflow-hidden"
+      className="min-h-screen flex items-center justify-center bg-cover bg-center"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="absolute inset-0 bg-black/40"></div>
-
-      <div className="relative w-full max-w-5xl flex rounded-3xl shadow-2xl overflow-hidden border border-gray-200 bg-white/30 backdrop-blur-xl z-10">
-        {/* Left Section (Dynamic Image + Info) */}
+      <div className="relative flex flex-col md:flex-row bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full mx-4 border border-white/30">
+        
+        {/* Left Side Image */}
         <motion.div
-          key={mode}
-          initial={{ x: mode === "login" ? "100%" : "-100%", opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: mode === "login" ? "-100%" : "100%", opacity: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className={`hidden md:flex w-1/2 flex-col justify-center items-center p-12 text-center bg-gradient-to-tr from-blue-50/60 to-indigo-50/60 ${
-            mode === "login" ? "order-2" : "order-1"
-          }`}
+          key={isLogin ? "login-image" : "signup-image"}
+          layout
+          initial={{ opacity: 0, scale: 0.9, x: isLogin ? -100 : 100 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={{ opacity: 0, scale: 0.9, x: isLogin ? 100 : -100 }}
+          transition={{
+            type: "spring",
+            stiffness: 80,
+            damping: 18,
+            duration: 0.6,
+          }}
+          className="hidden md:flex md:w-1/2 justify-center items-center"
         >
-          {/* ✅ Dynamic image */}
-          <img
-            src={currentSideImage}
-            alt={mode === "login" ? "Login illustration" : "Signup illustration"}
-            className="max-w-xs w-full mb-6 rounded-2xl shadow-xl transform hover:scale-105 transition duration-500"
-          />
-
-          <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-            {mode === "login" ? "Monitor Your Projects" : "Collaborate Securely"}
-          </h3>
-          <p className="text-gray-500 text-sm max-w-sm">
-            {mode === "login"
-              ? "Track your cloud analytics, manage files securely, and visualize data effortlessly."
-              : "Manage your organization’s cloud projects safely with Crypterra’s encryption tools."}
-          </p>
+          {isLogin ? (
+            <img
+              src={sideImageLogin}
+              alt="Login illustration"
+              className="w-3/4 h-3/4 object-contain"
+            />
+          ) : (
+            <img
+              src={sideImageSignup}
+              alt="Signup illustration"
+              className="w-3/4 h-3/4 object-contain"
+            />
+          )}
         </motion.div>
 
-        {/* Right Section (Forms) */}
+        {/* Right Side Form */}
         <motion.div
-          key={mode + "-form"}
-          initial={{ x: mode === "login" ? "-100%" : "100%", opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: mode === "login" ? "100%" : "-100%", opacity: 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className={`w-full md:w-1/2 p-10 flex flex-col justify-center relative z-10 ${
-            mode === "login" ? "order-1" : "order-2"
-          }`}
+          layout
+          className="flex flex-col justify-center items-center p-10 md:w-1/2 w-full"
+          transition={{ type: "spring", stiffness: 100, damping: 20 }}
         >
-          {mode === "login" ? (
-            <>
-              <h2 className="text-3xl font-bold text-gray-100 mb-3 text-center md:text-left drop-shadow-lg">
-                Welcome Back
-              </h2>
-              <p className="text-gray-200 text-sm mb-10 text-center md:text-left drop-shadow">
-                Sign in to access your secure cloud dashboard
-              </p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isLogin ? "login-form" : "signup-form"}
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -40, scale: 0.95 }}
+              transition={{
+                type: "spring",
+                stiffness: 120,
+                damping: 20,
+                duration: 0.6,
+              }}
+              className="w-full max-w-sm"
+            >
+              {isLogin ? (
+                <>
+                  <h2 className="text-3xl font-bold text-white text-center mb-4 drop-shadow-md">
+                    Welcome Back
+                  </h2>
+                  <p className="text-gray-200 text-center mb-6">
+                    Sign in to access your secure dashboard
+                  </p>
 
-              {loginError && (
-                <div className="text-red-400 text-center mb-4 font-medium animate-pulse">
-                  {loginError}
-                </div>
-              )}
+                  {loginError && (
+                    <p className="text-red-400 text-center mb-4 font-medium animate-pulse">
+                      {loginError}
+                    </p>
+                  )}
 
-              <form onSubmit={handleLogin} className="space-y-6">
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                </div>
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      required
+                    />
 
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  <div className="text-right mt-2">
-                    <Link
-                      to="/forgot-password"
-                      className="text-sm text-indigo-200 hover:underline"
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition"
                     >
-                      Forgot password?
-                    </Link>
+                      {loading ? "Logging in..." : "Login"}
+                    </motion.button>
+                  </form>
+
+                  <div className="text-center mt-5">
+                    <p className="text-white">
+                      Don’t have an account?{" "}
+                      <button
+                        onClick={switchMode}
+                        className="text-blue-300 font-medium hover:text-blue-400 transition"
+                      >
+                        Sign Up
+                      </button>
+                    </p>
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-bold text-white text-center mb-4 drop-shadow-md">
+                    Create Account
+                  </h2>
+                  <p className="text-gray-200 text-center mb-6">
+                    Join Crypterra — your secure cloud collaboration platform
+                  </p>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`w-full py-3 rounded-2xl text-white font-semibold shadow-lg transition-all duration-300 transform ${
-                    loading
-                      ? "bg-indigo-300 cursor-not-allowed"
-                      : "bg-gradient-to-r from-indigo-500 to-blue-500 hover:scale-105 hover:from-indigo-600 hover:to-blue-600"
-                  }`}
-                >
-                  {loading ? "Logging in..." : "Login"}
-                </button>
-              </form>
+                  {signupError && (
+                    <p className="text-red-400 text-center mb-4 font-medium animate-pulse">
+                      {signupError}
+                    </p>
+                  )}
 
-              <p className="text-center text-sm text-gray-200 mt-8">
-                Don’t have an account?{" "}
-                <button
-                  onClick={toggleMode}
-                  className="text-indigo-200 font-medium hover:underline"
-                >
-                  Sign up
-                </button>
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-3xl font-bold text-gray-100 mb-3 text-center md:text-left drop-shadow-lg">
-                Create Account
-              </h2>
-              <p className="text-gray-200 text-sm mb-10 text-center md:text-left drop-shadow">
-                Join Crypterra — your secure cloud collaboration platform
-              </p>
+                  <form onSubmit={handleSignup} className="space-y-5">
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={signupData.name}
+                      onChange={(e) =>
+                        setSignupData({ ...signupData, name: e.target.value })
+                      }
+                      className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      required
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={signupData.email}
+                      onChange={(e) =>
+                        setSignupData({ ...signupData, email: e.target.value })
+                      }
+                      className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={signupData.password}
+                      onChange={(e) =>
+                        setSignupData({
+                          ...signupData,
+                          password: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      required
+                    />
 
-              {signupError && (
-                <div className="text-red-400 text-center mb-4 font-medium animate-pulse">
-                  {signupError}
-                </div>
+                    <select
+                      value={signupData.role}
+                      onChange={(e) =>
+                        setSignupData({ ...signupData, role: e.target.value })
+                      }
+                      className="w-full p-3 rounded-xl bg-black text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                    >
+                      {roles.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 transition"
+                    >
+                      Sign Up
+                    </motion.button>
+                  </form>
+
+                  <div className="text-center mt-5">
+                    <p className="text-white">
+                      Already have an account?{" "}
+                      <button
+                        onClick={switchMode}
+                        className="text-blue-300 font-medium hover:text-blue-400 transition"
+                      >
+                        Login
+                      </button>
+                    </p>
+                  </div>
+                </>
               )}
-
-              <form onSubmit={handleSignup} className="space-y-6">
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Full Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    name="name"
-                    value={signupData.name}
-                    onChange={(e) =>
-                      setSignupData({ ...signupData, name: e.target.value })
-                    }
-                    placeholder="Enter your full name"
-                    required
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={signupData.email}
-                    onChange={(e) =>
-                      setSignupData({ ...signupData, email: e.target.value })
-                    }
-                    placeholder="Enter your email"
-                    required
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    name="password"
-                    value={signupData.password}
-                    onChange={(e) =>
-                      setSignupData({
-                        ...signupData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Create a password"
-                    required
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="role"
-                    className="block text-sm font-medium text-gray-100 mb-1"
-                  >
-                    Select Role
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={signupData.role}
-                    onChange={(e) =>
-                      setSignupData({ ...signupData, role: e.target.value })
-                    }
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  >
-                    {roles.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-2xl text-white font-semibold shadow-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105 hover:from-indigo-600 hover:to-blue-700 transition-all duration-300"
-                >
-                  Sign Up
-                </button>
-              </form>
-
-              <p className="text-center text-sm text-gray-200 mt-8">
-                Already have an account?{" "}
-                <button
-                  onClick={toggleMode}
-                  className="text-indigo-200 font-medium hover:underline"
-                >
-                  Login
-                </button>
-              </p>
-            </>
-          )}
+            </motion.div>
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>
