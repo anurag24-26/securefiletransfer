@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import sideImage from "../assets/loginsideimage1.jpg";
-import bgImage from "../assets/back1.jpg"; // <-- your background image
+import bgImage from "../assets/back1.jpg";
+import Footer from "../components/Footer"; //  Import footer
 
 const Login = () => {
   const { login, loading, error } = useAuth();
@@ -19,30 +19,35 @@ const Login = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
-    style={{ backgroundImage: `url(${bgImage})` }}
-
+      style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-black/40"></div>
 
-      <div className="relative w-full max-w-5xl flex flex-col md:flex-row rounded-3xl shadow-2xl overflow-hidden border border-gray-200 bg-white/30 backdrop-blur-xl animate-fadeIn z-10">
-        {/* Left Side – Login Form */}
-        <div className="md:w-1/2 w-full p-12 flex flex-col justify-center relative z-10">
-          <h2 className="text-3xl font-bold text-gray-100 mb-3 text-center md:text-left drop-shadow-lg">
-            Welcome Back
-          </h2>
-          <p className="text-gray-200 text-sm mb-10 text-center md:text-left drop-shadow">
-            Sign in to access your secure cloud dashboard
-          </p>
+      {/* Login Card */}
+      <div className="relative z-10 w-full max-w-md p-10 sm:p-12 rounded-2xl shadow-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-md flex flex-col items-center">
+        
+        {/* Title */}
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-[Orbitron] drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] hover:drop-shadow-[0_0_20px_rgba(34,211,238,0.8)] text-center mb-4">
+          Crypterra
+        </h1>
+        <p className="text-center text-gray-400 mb-8 text-sm">
+          Sign in to access your secure cloud dashboard
+        </p>
 
-          {error && (
-            <div className="text-red-400 text-center mb-4 font-medium animate-pulse">
-              {error}
-            </div>
-          )}
+        {/* Error Message */}
+        {error && (
+          <div className="text-red-400 mb-4 text-center font-medium animate-pulse">
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="w-full space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300">
+              Email Address
+            </label>
             <div className="relative">
               <label
                 htmlFor="email"
@@ -57,11 +62,16 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm transition duration-300 hover:shadow-md text-gray-900"
+                className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all duration-200 placeholder-gray-500"
               />
+              <span className="absolute right-3 top-3 text-cyan-400 text-lg">✉️</span>
             </div>
+          </div>
 
-            {/* Password */}
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+              Password
+            </label>
             <div className="relative">
               <label
                 htmlFor="password"
@@ -76,66 +86,41 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                className="w-full px-5 py-3 rounded-2xl border border-gray-200 bg-white/40 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm transition duration-300 hover:shadow-md text-gray-900"
+                className="border border-slate-700/70 bg-slate-900/60 p-3 w-full rounded-lg text-gray-100 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/40 transition-all duration-200 placeholder-gray-500"
               />
-              <div className="text-right mt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-indigo-200 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <span className="absolute right-3 top-3 text-purple-400 text-lg">🔒</span>
             </div>
+          </div>
 
-            {/* Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-3 rounded-2xl text-white font-semibold shadow-lg transition-all duration-300 transform ${
-                loading
-                  ? "bg-indigo-300 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-500 to-blue-500 hover:scale-105 hover:from-indigo-600 hover:to-blue-600"
-              }`}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg
+              ${loading ? "bg-slate-700 cursor-not-allowed" : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-700 hover:scale-[1.03]"}
+              text-white focus:ring-2 focus:ring-cyan-500/50`}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
 
-          {/* Sign up */}
-          <p className="text-center text-sm text-gray-200 mt-8 drop-shadow">
+        {/* Footer Links */}
+        <div className="text-center mt-8 space-y-3">
+          <p className="text-gray-400 text-sm">
             Don’t have an account?{" "}
             <Link
               to="/signup"
-              className="text-indigo-200 font-medium hover:underline"
+              className="text-cyan-400 font-semibold hover:underline hover:text-purple-400 transition"
             >
               Sign up
             </Link>
           </p>
 
-          {/* Floating Circle Decoration */}
-          <div className="absolute -top-10 -left-10 w-24 h-24 rounded-full bg-indigo-200/40 blur-3xl animate-pulse-slow"></div>
-          <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-blue-200/40 blur-3xl animate-pulse-slow"></div>
-        </div>
-
-        {/* Right Side – Image & Text */}
-        <div className="md:w-1/2 w-full flex flex-col justify-center items-center p-12 text-center bg-gradient-to-tr from-blue-50/60 to-indigo-50/60 relative overflow-hidden">
-          <img
-            src={sideImage}
-            alt="Project Illustration"
-            className="max-w-xs w-full mb-6 rounded-2xl shadow-xl transform hover:scale-105 transition duration-500"
-          />
-          <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-            Monitor Your Projects
-          </h3>
-          <p className="text-gray-500 text-sm max-w-sm">
-            Track your cloud analytics, manage files securely, and visualize
-            data insights effortlessly with our intuitive dashboard.
-          </p>
-
-          {/* Floating Decorative Circles */}
-          <div className="absolute -top-10 right-5 w-20 h-20 rounded-full bg-indigo-100/50 blur-3xl animate-pulse-slow"></div>
-          <div className="absolute bottom-0 -left-10 w-28 h-28 rounded-full bg-blue-100/50 blur-3xl animate-pulse-slow"></div>
+          <Link
+            to="/forgot-password"
+            className="text-sm text-gray-500 hover:text-cyan-400 hover:underline"
+          >
+            Forgot your password?
+          </Link>
         </div>
       </div>
     </div>
