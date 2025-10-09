@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { motion } from "framer-motion";
 import { HiOutlineLockClosed, HiOutlineMail } from "react-icons/hi";
+import api from "../services/api"; // ✅ using your api instance
 
 // Local images
 import bgImage from "../assets/back1.jpg";
@@ -34,7 +34,7 @@ const ForgotPassword = () => {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/api/auth/forgot-password", {
+      const res = await api.post("/auth/forgot-password", {
         email,
         newPassword,
         confirmPassword,
@@ -179,8 +179,6 @@ const ForgotPassword = () => {
               required
             />
           </div>
-
-
 
           {/* Button */}
           <motion.button
