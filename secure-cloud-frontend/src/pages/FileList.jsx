@@ -5,13 +5,46 @@ import api from "../services/api";
 import Loader from "../components/Loader";
 import bgImage from "../assets/back1.jpg";
 
-const VisibleFiles = () => {
+const FilesDashboard = () => {
   const { token } = useAuth();
+  const [activeTab, setActiveTab] = useState("upload");
   const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
+  const [file, setFile] = useState(null);
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState("");
+  const [visibleTo, setVisibleTo] = useState("");
+  const [visibleToType, setVisibleToType] = useState("Department");
+  const [departments, setDepartments] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [message, setMessage] = useState("");
+
+  // Fetch visibility targets for upload form
   useEffect(() => {
+    if (!token) return;
+    const fetchTargets = async () => {
+      try {
+        const res = await api.get("/files/visibility-targets", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setDepartments(res.data.departments || []);
+        setOrganizations(res.data.organizations || []);
+        setUsers(res.data.users || []);
+      } catch (err) {
+        console.error(err);
+        setMessage("Failed to load visibility targets");
+      }
+    };
+    fetchTargets();
+  }, [token]);
+
+  // Fetch visible files
+  useEffect(() => {
+    if (activeTab !== "visible" || !token) return;
     const fetchFiles = async () => {
+      setLoading(true);
       try {
         const res = await api.get("/files/visible-files", {
           headers: { Authorization: `Bearer ${token}` },
@@ -24,7 +57,60 @@ const VisibleFiles = () => {
       }
     };
     fetchFiles();
-  }, [token]);
+  }, [activeTab, token]);
+
+  const handleFileChange = (e) => setFile(e.target.files[0]);
+
+  const getVisibleOptions = () => {
+    switch (visibleToType) {
+      case "Department":
+        return departments;
+      case "Organization":
+        return organizations;
+      case "User":
+        return users;
+      default:
+        return [];
+    }
+  };
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!file || !type || !visibleTo) {
+      setMessage("Please fill in all required fields.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("description", description);
+    formData.append("type", type);
+    formData.append("visibleTo", visibleTo);
+    formData.append("visibleToType", visibleToType);
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await api.post("/files/upload", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setMessage(res.data.message || "File uploaded successfully!");
+      setFile(null);
+      setDescription("");
+      setType("");
+      setVisibleTo("");
+      setVisibleToType("Department");
+    } catch (err) {
+      console.error(err);
+      setMessage(err.response?.data?.message || "Error uploading file.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDownload = (filename) => {
     const link = document.createElement("a");
@@ -33,88 +119,223 @@ const VisibleFiles = () => {
     link.click();
   };
 
-  if (loading) return <Loader />;
-  if (!files.length)
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center bg-cover bg-center"
-        style={{ backgroundImage: `url(${bgImage})` }}
-      >
-        <p className="text-white text-lg font-medium bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 shadow-xl">
-          No files visible to you.
-        </p>
-      </div>
-    );
-
   return (
     <div
-      className="min-h-screen bg-cover bg-center py-16 px-6"
+      className="min-h-screen flex flex-col items-center justify-start bg-cover bg-center relative px-4 py-10"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-10"
-      >
-        Visible Files
-      </motion.h2>
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
 
-      <motion.div
-        layout
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-7xl mx-auto"
-      >
-        <AnimatePresence>
-          {files.map((file, index) => (
-            <motion.div
-              key={file._id}
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{
-                duration: 0.4,
-                delay: index * 0.05,
-                type: "spring",
-                stiffness: 100,
-              }}
-              className="relative bg-white/15 backdrop-blur-lg rounded-3xl p-6 border border-white/30 shadow-2xl hover:shadow-purple-700/40 transition duration-300"
+      {/* Main container */}
+      <div className="relative z-10 w-full max-w-6xl">
+        {/* Tabs */}
+        <div className="flex justify-center mb-10 space-x-4">
+          {["upload", "visible"].map((tab) => (
+            <motion.button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              whileHover={{ scale: 1.05 }}
+              className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
+                activeTab === tab
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg"
+                  : "bg-white/10 text-purple-200 border border-white/30 hover:bg-white/20"
+              }`}
             >
-              <h3 className="text-xl font-semibold text-white mb-3 truncate">
-                {file.originalName}
-              </h3>
-
-              <div className="text-gray-200 text-sm space-y-1">
-                <p>
-                  <span className="font-semibold text-purple-300">Type:</span>{" "}
-                  {file.type || "N/A"}
-                </p>
-                <p>
-                  <span className="font-semibold text-purple-300">
-                    Uploaded By:
-                  </span>{" "}
-                  {file.uploadedBy?.name || "Unknown"}
-                </p>
-                <p>
-                  <span className="font-semibold text-purple-300">
-                    Visibility:
-                  </span>{" "}
-                  {file.visibleToType}
-                </p>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownload(file.filename)}
-                className="w-full mt-5 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition"
-              >
-                Download
-              </motion.button>
-            </motion.div>
+              {tab === "upload" ? "Upload File" : "Visible Files"}
+            </motion.button>
           ))}
+        </div>
+
+        {/* Content */}
+        <AnimatePresence mode="wait">
+          {activeTab === "upload" ? (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="mx-auto bg-white/15 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl p-8 w-full max-w-md"
+            >
+              <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">
+                Upload Encrypted File
+              </h2>
+
+              <form onSubmit={handleUpload} className="space-y-5">
+                <div>
+                  <label className="text-purple-200 block mb-1 font-medium">
+                    Select File *
+                  </label>
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-purple-200 block mb-1 font-medium">
+                    Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional note"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-purple-200 block mb-1 font-medium">
+                    File Type *
+                  </label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select type</option>
+                    <option value="report">Report</option>
+                    <option value="document">Document</option>
+                    <option value="presentation">Presentation</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-purple-200 block mb-1 font-medium">
+                    Visible Type *
+                  </label>
+                  <select
+                    value={visibleToType}
+                    onChange={(e) => {
+                      setVisibleToType(e.target.value);
+                      setVisibleTo("");
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="Department">Department</option>
+                    <option value="Organization">Organization</option>
+                    <option value="User">User</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-purple-200 block mb-1 font-medium">
+                    Visible To *
+                  </label>
+                  <select
+                    value={visibleTo}
+                    onChange={(e) => setVisibleTo(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select {visibleToType}</option>
+                    {getVisibleOptions().map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-2.5 rounded-xl font-semibold shadow-lg"
+                >
+                  {loading ? "Uploading..." : "Upload File"}
+                </motion.button>
+
+                {message && (
+                  <p
+                    className={`text-center mt-2 ${
+                      message.toLowerCase().includes("success")
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {message}
+                  </p>
+                )}
+              </form>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="visible"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="mx-auto max-w-7xl"
+            >
+              {loading ? (
+                <Loader />
+              ) : files.length === 0 ? (
+                <p className="text-center text-white text-lg font-medium bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 shadow-xl">
+                  No files visible to you.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  {files.map((file, index) => (
+                    <motion.div
+                      key={file._id}
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.05,
+                        type: "spring",
+                        stiffness: 100,
+                      }}
+                      className="relative bg-white/15 backdrop-blur-lg rounded-3xl p-6 border border-white/30 shadow-2xl hover:shadow-purple-700/40 transition duration-300"
+                    >
+                      <h3 className="text-xl font-semibold text-white mb-3 truncate">
+                        {file.originalName}
+                      </h3>
+
+                      <div className="text-gray-200 text-sm space-y-1">
+                        <p>
+                          <span className="font-semibold text-purple-300">
+                            Type:
+                          </span>{" "}
+                          {file.type || "N/A"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-purple-300">
+                            Uploaded By:
+                          </span>{" "}
+                          {file.uploadedBy?.name || "Unknown"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-purple-300">
+                            Visibility:
+                          </span>{" "}
+                          {file.visibleToType}
+                        </p>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleDownload(file.filename)}
+                        className="w-full mt-5 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition"
+                      >
+                        Download
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   );
 };
 
-export default VisibleFiles;
+export default FilesDashboard;
