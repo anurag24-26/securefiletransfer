@@ -5,7 +5,7 @@ const api = axios.create({
   baseURL: "https://securefiletransfer-0kub.onrender.com/api", // adjust to your backend URL
   timeout: 15000,
 });
-
+//https://securefiletransfer-0kub.onrender.com
 // Function to set or remove Authorization header
 export const setAuthToken = (token) => {
   if (token) {
