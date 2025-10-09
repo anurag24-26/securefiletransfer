@@ -11,6 +11,7 @@ import Navbar from "./components/Navbar";
 import MyOrganization from "./pages/MyOrganization";
 import VisibleFiles from "./pages/FileList";
 import Footer from "./components/Footer";
+import ForgotPassword from "./components/Forget";
 function App() {
   return (
     <AuthProvider>
@@ -22,6 +23,7 @@ function App() {
             <Route path="/orglist" element={<OrgList />} />
             <Route path="/filelist" element={<FileList />} />
             <Route path="/login" element={<Login />} />
+             <Route path="/forgot-password" element={<ForgotPassword />} />
             {/* <Route path="/signup" element={<Signup />} /> */}
             <Route path="/yourfiles" element={<VisibleFiles />} />
             <Route path="/adminSettings" element={<AdminSettings />} />
