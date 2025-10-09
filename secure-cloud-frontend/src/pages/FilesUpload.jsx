@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
+import bgImage from "../assets/back1.jpg";
 
 const FilesUpload = () => {
   const { token } = useAuth();
@@ -67,7 +69,10 @@ const FilesUpload = () => {
 
     try {
       const res = await api.post("/files/upload", formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
       setMessage(res.data.message || "File uploaded successfully!");
       setFile(null);
@@ -84,21 +89,57 @@ const FilesUpload = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-      <div className="bg-slate-800 p-8 rounded-xl w-full max-w-md shadow-lg border border-slate-700">
-        <h2 className="text-white text-2xl font-bold mb-6 text-center">Upload Encrypted File</h2>
-        <form onSubmit={handleUpload} className="space-y-4">
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center relative px-4 py-10"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 bg-white/15 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl p-8 w-full max-w-md"
+      >
+        <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">
+          Upload Encrypted File
+        </h2>
+
+        <form onSubmit={handleUpload} className="space-y-5">
           <div>
-            <label className="text-gray-300 block mb-1">Select File *</label>
-            <input type="file" onChange={handleFileChange} className="w-full p-2 rounded border border-slate-600 bg-slate-700 text-gray-200"/>
+            <label className="text-purple-200 block mb-1 font-medium">
+              Select File *
+            </label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
+
           <div>
-            <label className="text-gray-300 block mb-1">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional note" className="w-full p-2 rounded border border-slate-600 bg-slate-700 text-gray-200" rows={2} />
+            <label className="text-purple-200 block mb-1 font-medium">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional note"
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              rows={2}
+            />
           </div>
+
           <div>
-            <label className="text-gray-300 block mb-1">File Type *</label>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full p-2 rounded border border-slate-600 bg-slate-700 text-gray-200">
+            <label className="text-purple-200 block mb-1 font-medium">
+              File Type *
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               <option value="">Select type</option>
               <option value="report">Report</option>
               <option value="document">Document</option>
@@ -106,27 +147,66 @@ const FilesUpload = () => {
               <option value="other">Other</option>
             </select>
           </div>
+
           <div>
-            <label className="text-gray-300 block mb-1">Visible Type *</label>
-            <select value={visibleToType} onChange={(e) => { setVisibleToType(e.target.value); setVisibleTo(""); }} className="w-full p-2 rounded border border-slate-600 bg-slate-700 text-gray-200">
+            <label className="text-purple-200 block mb-1 font-medium">
+              Visible Type *
+            </label>
+            <select
+              value={visibleToType}
+              onChange={(e) => {
+                setVisibleToType(e.target.value);
+                setVisibleTo("");
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               <option value="Department">Department</option>
               <option value="Organization">Organization</option>
               <option value="User">User</option>
             </select>
           </div>
+
           <div>
-            <label className="text-gray-300 block mb-1">Visible To *</label>
-            <select value={visibleTo} onChange={(e) => setVisibleTo(e.target.value)} className="w-full p-2 rounded border border-slate-600 bg-slate-700 text-gray-200">
+            <label className="text-purple-200 block mb-1 font-medium">
+              Visible To *
+            </label>
+            <select
+              value={visibleTo}
+              onChange={(e) => setVisibleTo(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               <option value="">Select {visibleToType}</option>
-              {getVisibleOptions().map(item => <option key={item._id} value={item._id}>{item.name}</option>)}
+              {getVisibleOptions().map((item) => (
+                <option key={item._id} value={item._id}>
+                  {item.name}
+                </option>
+              ))}
             </select>
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-2.5 rounded-xl font-semibold shadow-lg"
+          >
             {loading ? "Uploading..." : "Upload File"}
-          </button>
-          {message && <p className={`text-center mt-2 ${message.toLowerCase().includes("success") ? "text-green-400" : "text-red-400"}`}>{message}</p>}
+          </motion.button>
+
+          {message && (
+            <p
+              className={`text-center mt-2 ${
+                message.toLowerCase().includes("success")
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
+              {message}
+            </p>
+          )}
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };
