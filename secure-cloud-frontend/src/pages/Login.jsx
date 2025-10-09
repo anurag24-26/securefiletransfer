@@ -1,3 +1,4 @@
+// AuthPage.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,6 +53,10 @@ const AuthPage = () => {
   };
 
   const switchMode = () => setIsLogin(!isLogin);
+
+  const handleForgotPassword = () => {
+    navigate("/forgot-password"); // Navigate to forgot password page
+  };
 
   return (
     <div
@@ -142,6 +147,16 @@ const AuthPage = () => {
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
                     />
+
+                    <div className="flex justify-end text-sm">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-blue-300 hover:text-blue-400 transition font-medium"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
 
                     <motion.button
                       whileHover={{ scale: 1.03 }}

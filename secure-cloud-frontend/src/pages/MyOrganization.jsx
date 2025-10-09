@@ -1,9 +1,10 @@
+// MyOrganization.js
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { motion } from "framer-motion";
 
 import {
-  HiOutlineMail,
   HiOutlineXCircle,
   HiOutlineUserCircle,
 } from "react-icons/hi";
@@ -14,8 +15,9 @@ import {
   HiOutlineIdentification,
 } from "react-icons/hi2";
 
+import defaultBg from "../assets/back1.jpg";
 
-const MyOrganization = () => {
+const MyOrganization = ({ backgroundImage }) => {
   const { token, setUser } = useAuth();
   const [org, setOrg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,6 @@ const MyOrganization = () => {
   const [joinCode, setJoinCode] = useState("");
   const [message, setMessage] = useState("");
 
-  // Fetch organization info
   const fetchOrg = async () => {
     setLoading(true);
     setErr(null);
@@ -35,7 +36,7 @@ const MyOrganization = () => {
     } catch (error) {
       const data = error.response?.data;
       if (data?.allowJoin) {
-        setOrg(null); // means user can join
+        setOrg(null);
         setErr(null);
       } else {
         setErr(data?.message || "Could not fetch organization details.");
@@ -50,7 +51,6 @@ const MyOrganization = () => {
     if (token) fetchOrg();
   }, [token]);
 
-  // Join organization by code
   const handleJoinOrg = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -64,11 +64,11 @@ const MyOrganization = () => {
       setMessage(res.data.message || "Joined successfully!");
       setJoinCode("");
 
-      // Update user state after joining
       const { data: userData } = await api.get("/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (userData && userData.user && typeof setUser === "function") setUser(userData.user);
+      if (userData && userData.user && typeof setUser === "function")
+        setUser(userData.user);
 
       await fetchOrg();
     } catch (error) {
@@ -76,7 +76,6 @@ const MyOrganization = () => {
     }
   };
 
-  // Leave organization
   const handleLeaveOrg = async () => {
     if (!window.confirm("Are you sure you want to leave your organization?")) return;
     try {
@@ -91,40 +90,71 @@ const MyOrganization = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-100 via-indigo-50 to-purple-100 py-12 px-4 transition-colors">
-      <div className="bg-white rounded-3xl shadow-2xl px-8 py-10 max-w-xl w-full space-y-8 hover:shadow-indigo-200 transition-shadow duration-200">
-        <h1 className="text-4xl font-black text-center mb-6 bg-gradient-to-r from-indigo-600 via-blue-500 to-indigo-700 text-transparent bg-clip-text tracking-tight">
-          <HiOutlineBuildingLibrary className="inline-block mr-2 -mt-1" />
-          My Organization
+    <div
+      className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-auto"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url(${
+          backgroundImage || defaultBg
+        })`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="relative z-10 w-full max-w-4xl sm:p-12 p-4 rounded-3xl bg-white/20 backdrop-blur-3xl border border-white/20 shadow-2xl space-y-6 sm:space-y-8 transition-all duration-500 hover:shadow-indigo-600/50"
+      >
+        {/* Header */}
+        <h1 className="text-3xl sm:text-5xl font-extrabold text-center tracking-tight flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-3 drop-shadow-md">
+          <HiOutlineBuildingLibrary className="inline-block text-3xl sm:text-5xl text-white" />
+          <span className="text-white text-center">My Organization</span>
         </h1>
 
         {/* Loader */}
         {loading && (
-          <div className="flex flex-col gap-2 items-center">
-            <span className="inline-block h-8 w-8 rounded-full border-4 border-indigo-300 border-b-transparent animate-spin"></span>
-            <span className="text-lg text-gray-500 animate-pulse">Loading organization ...</span>
+          <div className="flex flex-col gap-3 items-center">
+            <span className="inline-block h-12 w-12 rounded-full border-4 border-blue-400 border-b-transparent animate-spin"></span>
+            <span className="text-lg text-gray-200 animate-pulse">Loading organization ...</span>
           </div>
         )}
 
-        {/* Error message */}
+        {/* Error */}
         {!loading && err && (
-          <div className="flex items-center justify-center gap-2 text-red-600 bg-red-50 border border-red-200 p-2 rounded font-semibold">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center justify-center gap-2 text-red-800 bg-red-100/60 border border-red-300/50 p-3 rounded-2xl font-semibold backdrop-blur-sm shadow-md"
+          >
             <HiOutlineXCircle className="text-xl" /> {err}
-          </div>
+          </motion.div>
         )}
 
         {/* Success message */}
         {message && (
-          <div className="text-green-600 bg-green-50 rounded py-2 font-semibold text-center">{message}</div>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-green-800 bg-green-100/60 rounded-2xl py-2 font-semibold text-center backdrop-blur-sm shadow-md"
+          >
+            {message}
+          </motion.div>
         )}
 
-        {/* Org info card */}
+        {/* Organization card */}
         {!loading && org && (
-          <div className="flex flex-col gap-4">
-            {/* Leave button */}
-            <div className="flex justify-end">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col gap-4 sm:gap-6"
+          >
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <button
-                className="flex items-center gap-1 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-full px-4 py-1 font-semibold text-sm transition"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-red-400 via-pink-300 to-red-200 text-white rounded-full px-5 py-2 font-semibold text-sm shadow-lg hover:shadow-red-300/50 transition transform hover:scale-105"
                 onClick={handleLeaveOrg}
                 title="Leave organization"
               >
@@ -132,8 +162,9 @@ const MyOrganization = () => {
                 Leave Organization
               </button>
             </div>
-            <div className="rounded-xl border bg-gradient-to-r from-white to-indigo-50 p-6 flex flex-col gap-4 shadow">
-              <div className="flex items-center gap-2 text-indigo-700 text-lg font-bold">
+
+            <div className="rounded-3xl border border-white/20 bg-gradient-to-r from-white/30 via-white/20 to-white/30 backdrop-blur-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-xl transition hover:shadow-2xl hover:scale-105 transform">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-blue-900 text-lg font-bold">
                 <HiOutlineBuildingLibrary className="text-2xl" />
                 {org.name}
               </div>
@@ -143,13 +174,14 @@ const MyOrganization = () => {
               </div>
               {org.parent && (
                 <div className="flex items-center gap-2 text-gray-700">
-                  <span className="font-semibold">Parent:</span>
-                  <span className="italic text-indigo-500">{typeof org.parent === "object" ? org.parent?.name : org.parent}</span>
+                  <span className="font-semibold text-gray-800">Parent:</span>
+                  <span className="italic text-teal-600">{typeof org.parent === "object" ? org.parent?.name : org.parent}</span>
                 </div>
               )}
-              {/* Admin section */}
+
+              {/* Admins */}
               <div>
-                <div className="flex items-center gap-2 mb-2 text-indigo-600 font-semibold">
+                <div className="flex items-center gap-2 mb-2 text-blue-700 font-semibold">
                   <HiOutlineUserCircle className="text-lg" />
                   Admins
                 </div>
@@ -157,16 +189,18 @@ const MyOrganization = () => {
                   {org.admins && org.admins.length > 0 ? (
                     org.admins.map((admin) =>
                       admin ? (
-                        <div
+                        <motion.div
                           key={admin.id}
-                          className="flex items-center justify-between bg-indigo-50 rounded px-3 py-1 shadow-inner"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-blue-100 via-teal-100 to-indigo-100 rounded-xl px-3 py-2 shadow-md gap-1 sm:gap-0 hover:scale-105 transition transform"
                         >
-                          <span className="font-bold text-indigo-700">{admin.name}</span>
-                          <span className="text-xs text-gray-500">{admin.email}</span>
-                          <span className="inline-block text-xs rounded-full px-2 py-0.5 bg-indigo-200 text-indigo-900 capitalize ml-2">
+                          <span className="font-bold text-blue-900">{admin.name}</span>
+                          <span className="text-xs text-gray-700">{admin.email}</span>
+                          <span className="inline-block text-xs rounded-full px-2 py-0.5 bg-gradient-to-r from-blue-500 to-teal-500 text-white capitalize ml-0 sm:ml-2">
                             {admin.role.replace("Admin", " Admin")}
                           </span>
-                        </div>
+                        </motion.div>
                       ) : null
                     )
                   ) : (
@@ -174,11 +208,11 @@ const MyOrganization = () => {
                   )}
                 </div>
               </div>
-              {/* Details footer */}
+
               <div className="mt-4 flex items-center justify-center">
-                <span className="inline-flex items-center bg-indigo-50 px-4 py-1 text-xs text-indigo-600 rounded-full shadow-sm">
+                <span className="inline-flex items-center bg-blue-50/40 px-3 py-1 text-xs text-blue-700 rounded-full shadow-sm backdrop-blur-sm">
                   <svg
-                    className="h-4 w-4 mr-1 text-indigo-400"
+                    className="h-4 w-4 mr-1 text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -190,13 +224,19 @@ const MyOrganization = () => {
                 </span>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Join organization form */}
+        {/* Join form */}
         {!loading && !org && !err && (
-          <form onSubmit={handleJoinOrg} className="bg-white rounded-lg shadow p-8 space-y-5 border border-indigo-100">
-            <h3 className="text-2xl font-bold text-center text-indigo-700 mb-4">
+          <motion.form
+            onSubmit={handleJoinOrg}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-gradient-to-r from-white/40 via-white/30 to-white/40 backdrop-blur-3xl rounded-3xl shadow-xl p-6 sm:p-8 space-y-4 sm:space-y-6 border border-white/30 transition hover:shadow-2xl hover:scale-105 transform"
+          >
+            <h3 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-3 sm:mb-4 drop-shadow-sm">
               Join an Organization / Department
             </h3>
             <input
@@ -204,17 +244,17 @@ const MyOrganization = () => {
               placeholder="Enter Join Code"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              className="w-full p-3 rounded border border-indigo-300 text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+              className="w-full p-3 rounded-xl border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition backdrop-blur-sm"
             />
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg py-2 rounded-full transition"
+              className="w-full bg-gradient-to-r from-blue-500 via-teal-500 to-indigo-500 hover:from-indigo-500 hover:via-blue-500 hover:to-teal-500 text-white font-bold text-lg py-3 rounded-full shadow-lg transition transform hover:scale-105"
             >
               Join
             </button>
-          </form>
+          </motion.form>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };
