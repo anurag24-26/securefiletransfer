@@ -3,6 +3,100 @@ import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
+
+const Pill = ({ children, tone = "default" }) => {
+  const tones = {
+    default: "bg-gray-100 text-gray-800",
+    info: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
+    success: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+    warn: "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200",
+    danger: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+};
+
+const Section = ({ title, subtitle, children, actions }) => (
+  <section className="bg-white/80 backdrop-blur rounded-2xl shadow-xl ring-1 ring-gray-200">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 px-6 py-4">
+      <div>
+        <h3 className="text-xl font-semibold tracking-tight text-gray-900">{title}</h3>
+        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+      </div>
+      {actions && <div className="flex items-center gap-2">{actions}</div>}
+    </div>
+    <div className="p-6">{children}</div>
+  </section>
+);
+
+const Table = ({ children }) => (
+  <div className="overflow-hidden rounded-xl border border-gray-200">
+    <div className="overflow-x-auto">{children}</div>
+  </div>
+);
+
+const EmptyState = ({ title, note }) => (
+  <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+    <div className="text-5xl mb-4">📁</div>
+    <h4 className="text-lg font-semibold text-gray-800">{title}</h4>
+    {note && <p className="text-sm text-gray-500 mt-1">{note}</p>}
+  </div>
+);
+
+const Field = ({ children }) => <div className="relative">{children}</div>;
+
+const Input = (props) => (
+  <input
+    {...props}
+    className={`border border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 rounded-xl w-full px-3.5 py-2.5 text-sm transition ${props.className || ""}`}
+  />
+);
+
+const Select = (props) => (
+  <select
+    {...props}
+    className={`border border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 rounded-xl w-full px-3.5 py-2.5 text-sm bg-white transition ${props.className || ""}`}
+  />
+);
+
+const Btn = ({ children, tone = "primary", className = "", ...rest }) => {
+  const tones = {
+    primary:
+      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 focus:ring-blue-200",
+    neutral:
+      "bg-gray-100 text-gray-800 hover:bg-gray-200 focus:ring-gray-200",
+    warn: "bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-200",
+    danger:
+      "bg-red-500 text-white hover:bg-red-600 focus:ring-red-200",
+    success:
+      "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-200",
+    outline:
+      "bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 focus:ring-gray-200",
+  };
+  return (
+    <button
+      {...rest}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium shadow-sm focus:outline-none focus:ring-4 transition ${tones[tone]} ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+const BadgeRole = ({ role }) => {
+  const map = {
+    superAdmin: { tone: "danger", label: "Super Admin" },
+    orgAdmin: { tone: "info", label: "Org Admin" },
+    deptAdmin: { tone: "warn", label: "Dept Admin" },
+    user: { tone: "default", label: "User" },
+  };
+  const { tone, label } = map[role] ?? map.user;
+  return <Pill tone={tone}>{label}</Pill>;
+};
+
 const OrgList = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +109,7 @@ const OrgList = () => {
   const [error, setError] = useState(null);
   const [regeneratingId, setRegeneratingId] = useState(null);
 
-  // For managing users under selected org
+  // Users under selected org
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [users, setUsers] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
@@ -23,41 +117,32 @@ const OrgList = () => {
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "user" });
   const [addingUser, setAddingUser] = useState(false);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!token) navigate("/login");
   }, [token, navigate]);
 
-  // Fetch organizations
   const fetchOrgs = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/org/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/org/", { headers: { Authorization: `Bearer ${token}` } });
       let organizations = res.data.organizations || [];
 
-      // If user is normal user (no admin roles), fetch their department org if not included
       if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role)) {
-        // Attempt fetching user's org by id
         const userOrgId = user?.orgId?._id || user?.orgId;
         if (userOrgId && !organizations.find((o) => o._id === userOrgId)) {
           try {
             const orgRes = await api.get(`/org/hierarchy/${userOrgId}`, {
               headers: { Authorization: `Bearer ${token}` },
             });
-            if (orgRes.data) {
-              organizations = [...organizations, orgRes.data];
-            }
+            if (orgRes.data) organizations = [...organizations, orgRes.data];
           } catch {
-            // Ignore error here
+            // ignore
           }
         }
       }
-
       setOrgs(organizations);
-    } catch (err) {
+    } catch {
       setError("Failed to load organizations. Please try again.");
     } finally {
       setLoading(false);
@@ -73,7 +158,6 @@ const OrgList = () => {
     }
   }, [token]);
 
-  // Create or Update Org
   const handleSubmit = async (e) => {
     e.preventDefault();
     setJoinCode(null);
@@ -87,17 +171,12 @@ const OrgList = () => {
 
     try {
       if (editing) {
-        await api.put(`/org/${editing}`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.put(`/org/${editing}`, payload, { headers: { Authorization: `Bearer ${token}` } });
         setEditing(null);
       } else {
-        const res = await api.post("/org/create", payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.post("/org/create", payload, { headers: { Authorization: `Bearer ${token}` } });
         if (res.data.joinCode) setJoinCode(res.data.joinCode);
       }
-
       setForm({ name: "", type: "", parentId: "", deptAdminId: "" });
       fetchOrgs();
     } catch (err) {
@@ -105,13 +184,10 @@ const OrgList = () => {
     }
   };
 
-  // Delete Org
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this organization?")) return;
     try {
-      await api.delete(`/org/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/org/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       fetchOrgs();
       if (selectedOrgId === id) {
         setSelectedOrgId(null);
@@ -122,7 +198,6 @@ const OrgList = () => {
     }
   };
 
-  // Edit Org
   const handleEdit = (org) => {
     setEditing(org._id);
     setJoinCode(null);
@@ -134,17 +209,10 @@ const OrgList = () => {
     });
   };
 
-  // Regenerate Join Code
   const handleRegenerateCode = async (orgId) => {
     setRegeneratingId(orgId);
     try {
-      const res = await api.post(
-        `/org/${orgId}/generate-code`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.post(`/org/${orgId}/generate-code`, {}, { headers: { Authorization: `Bearer ${token}` } });
       alert(`New join code: ${res.data.joinCode}`);
       fetchOrgs();
     } catch {
@@ -154,16 +222,13 @@ const OrgList = () => {
     }
   };
 
-  // Fetch Users under selected organization/department
   const fetchUsers = async (orgId) => {
     setUserLoading(true);
     setUserError(null);
     try {
-      const res = await api.get(`/org/${orgId}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get(`/org/${orgId}/users`, { headers: { Authorization: `Bearer ${token}` } });
       setUsers(res.data.users || []);
-    } catch (err) {
+    } catch {
       setUserError("Failed to load users.");
       setUsers([]);
     } finally {
@@ -171,299 +236,341 @@ const OrgList = () => {
     }
   };
 
-  // Select org and fetch users under it
   const handleSelectOrgUsers = (orgId) => {
     setSelectedOrgId(orgId);
     fetchUsers(orgId);
   };
 
-  // Add new user under selected org
   const handleAddUser = async (e) => {
-  e.preventDefault();
-  if (!selectedOrgId) {
-    alert("Please select an organization or department first.");
-    return;
-  }
-  setAddingUser(true);
-  try {
-    // Send a join request instead of direct creation
-    const payload = {
-      email: newUser.email,
-      requestedRole: newUser.role,
-      orgId: selectedOrgId,
-      message: "Request to join organization",
-      type: "join", // type of request
-    };
+    e.preventDefault();
+    if (!selectedOrgId) {
+      alert("Please select an organization or department first.");
+      return;
+    }
+    setAddingUser(true);
+    try {
+      const payload = {
+        email: newUser.email,
+        requestedRole: newUser.role,
+        orgId: selectedOrgId,
+        message: "Request to join organization",
+        type: "join",
+      };
+      await api.post("/requests", payload, { headers: { Authorization: `Bearer ${token}` } });
+      alert("Request sent to the user for approval.");
+      setNewUser({ email: "", role: "user" });
+      fetchUsers(selectedOrgId);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to send join request.");
+    } finally {
+      setAddingUser(false);
+    }
+  };
 
-    await api.post("/requests", payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    alert("Request sent to the user for approval.");
-    setNewUser({ email: "", role: "user" });
-    fetchUsers(selectedOrgId);
-  } catch (err) {
-    alert(err.response?.data?.message || "Failed to send join request.");
-  } finally {
-    setAddingUser(false);
-  }
-};
-
-
-  // Permission helpers
   const canManageOrgs = ["superAdmin", "orgAdmin"].includes(user?.role);
   const canManageDept = ["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role);
 
-  // Loading or Error State for orgs
   if (loading) {
     return (
       <>
-    <Loader/>
-    </>
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader />
+            <p className="text-sm text-gray-500">Preparing your workspace…</p>
+          </div>
+        </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500 text-lg">{error}</p>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <Section title="Something went wrong">
+          <p className="text-red-600">{error}</p>
+        </Section>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-center mb-6">Organization & Department Management</h2>
-
-        {(user?.role === "superAdmin" || user?.role === "orgAdmin") && (
-          <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-100 rounded-lg shadow-inner space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <input
-                type="text"
-                placeholder="Organization / Department Name"
-                className="border p-3 rounded-md w-full"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-              <select
-                className="border p-3 rounded-md w-full"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                required
-              >
-                <option value="">Select Type</option>
-                <option value="university">University</option>
-                <option value="business">Business</option>
-                <option value="hospital">Hospital</option>
-                <option value="department">Department</option>
-              </select>
-              <select
-                className="border p-3 rounded-md w-full"
-                value={form.parentId}
-                onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-              >
-                <option value="">Parent (for Departments)</option>
-                {orgs.filter((o) => o.type !== "department").map((o) => (
-                  <option key={o._id} value={o._id}>
-                    {o.name} ({o.type})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                placeholder="Dept Admin User ID (optional)"
-                className="border p-3 rounded-md w-full"
-                value={form.deptAdminId}
-                onChange={(e) => setForm({ ...form, deptAdminId: e.target.value })}
-              />
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 via-white to-gray-50 p-6">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Header */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 text-white">
+          <div className="absolute inset-0 bg-[url('https://www.toptal.com/designers/subtlepatterns/uploads/double-bubble-outline.png')] opacity-10" />
+          <div className="relative px-8 py-10">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Organization & Department Management
+            </h2>
+            <p className="text-white/90 mt-1">
+              Create, manage, and review your organisational structure and memberships.
+            </p>
+            <div className="mt-4">
+              <Pill tone="success">Signed in as</Pill>{" "}
+              <span className="font-medium">{user?.email}</span>{" "}
+              <BadgeRole role={user?.role} />
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition"
-              >
-                {editing ? "Update" : "Add"}
-              </button>
-              {editing && (
-                <button
-                  type="button"
-                  className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-md transition"
+          </div>
+        </div>
+
+        {/* Create / Edit */}
+        {canManageOrgs && (
+          <Section
+            title={editing ? "Update Organisation / Department" : "Create Organisation / Department"}
+            subtitle="Provide basic details. You may optionally set a parent for departments and assign a department admin."
+            actions={
+              editing && (
+                <Btn
+                  tone="outline"
                   onClick={() => {
                     setEditing(null);
                     setForm({ name: "", type: "", parentId: "", deptAdminId: "" });
                     setJoinCode(null);
                   }}
                 >
-                  Cancel
-                </button>
-              )}
-            </div>
-            {joinCode && <p className="mt-2 text-green-600 font-semibold">New join code: {joinCode}</p>}
-          </form>
+                  Cancel edit
+                </Btn>
+              )
+            }
+          >
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Field>
+                  <Input
+                    type="text"
+                    placeholder="Organisation / Department Name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </Field>
+
+                <Field>
+                  <Select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="university">University</option>
+                    <option value="business">Business</option>
+                    <option value="hospital">Hospital</option>
+                    <option value="department">Department</option>
+                  </Select>
+                </Field>
+
+                <Field>
+                  <Select
+                    value={form.parentId}
+                    onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+                  >
+                    <option value="">Parent (for Departments)</option>
+                    {orgs
+                      .filter((o) => o.type !== "department")
+                      .map((o) => (
+                        <option key={o._id} value={o._id}>
+                          {o.name} ({o.type})
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+
+                <Field>
+                  <Input
+                    type="text"
+                    placeholder="Dept Admin User ID (optional)"
+                    value={form.deptAdminId}
+                    onChange={(e) => setForm({ ...form, deptAdminId: e.target.value })}
+                  />
+                </Field>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Btn type="submit">{editing ? "Update" : "Add"}</Btn>
+                {joinCode && (
+                  <Pill tone="success">New join code: {joinCode}</Pill>
+                )}
+              </div>
+            </form>
+          </Section>
         )}
 
-        <table className="w-full border border-gray-300 rounded-md">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="p-3 border">Name</th>
-              <th className="p-3 border">Type</th>
-              <th className="p-3 border">Parent</th>
-              {(user?.role === "superAdmin" || user?.role === "orgAdmin") && (
-                <>
-                  <th className="p-3 border">Join Code</th>
-                  <th className="p-3 border">Actions</th>
-                  <th className="p-3 border">Users</th>
-                </>
-              )}
-              {user?.role === "deptAdmin" && <th className="p-3 border">Users</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {orgs.length === 0 ? (
-              <tr>
-                <td colSpan={user?.role === "superAdmin" || user?.role === "orgAdmin" ? 6 : 4} className="text-center p-3 border">
-                  No organizations found.
-                </td>
-              </tr>
-            ) : (
-              orgs.map((org) => (
-                <tr key={org._id} className="hover:bg-gray-50">
-                  <td className="p-3 border">{org.name}</td>
-                  <td className="p-3 border capitalize">{org.type}</td>
-                  <td className="p-3 border">{org.parentId?.name || "—"}</td>
-                  {(user?.role === "superAdmin" || user?.role === "orgAdmin") && (
-                    <>
-                      <td className="p-3 border font-mono">{org.joinCode || "N/A"}</td>
-                      <td className="p-3 border flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleEdit(org)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(org._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          disabled={regeneratingId === org._id}
-                          onClick={() => handleRegenerateCode(org._id)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md"
-                        >
-                          {regeneratingId === org._id ? "Regenerating..." : "Regenerate Code"}
-                        </button>
-                      </td>
-                      <td className="p-3 border">
-                        <button
-                          onClick={() => handleSelectOrgUsers(org._id)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md"
-                        >
-                          View Users
-                        </button>
-                      </td>
-                    </>
-                  )}
-                  {(user?.role === "deptAdmin" || (!user?.role || user?.role === "user")) && (
-                    <td className="p-3 border">
-                      <button
-                        onClick={() => handleSelectOrgUsers(org._id)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md"
-                        disabled={!(user?.role === "deptAdmin")}
-                      >
-                        View Users
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        {/* Users under selected org */}
-        {selectedOrgId && (
-          <div className="mt-8 bg-white p-6 rounded-lg shadow-inner">
-            <h3 className="text-2xl font-semibold mb-4">
-              Users under Organization / Department
-            </h3>
-
-            {userLoading ? (
-              <p>Loading users...</p>
-            ) : userError ? (
-              <p className="text-red-500">{userError}</p>
-            ) : users.length === 0 ? (
-              <p>No users found.</p>
-            ) : (
-              <table className="w-full border border-gray-300 rounded-md">
-                <thead className="bg-gray-200">
-                  <tr>
-                    <th className="p-3 border">Name</th>
-                    <th className="p-3 border">Email</th>
-                    <th className="p-3 border">Role</th>
-                    <th className="p-3 border">Organization</th>
+        {/* Organisations Table */}
+        <Section
+          title="Organisations & Departments"
+          subtitle="Browse existing entries, manage access, and view members."
+        >
+          {orgs.length === 0 ? (
+            <EmptyState
+              title="No organisations found."
+              note={canManageOrgs ? "Use the form above to add your first organisation." : undefined}
+            />
+          ) : (
+            <Table>
+              <table className="min-w-full divide-y divide-gray-200 bg-white">
+                <thead className="bg-gray-50">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Parent</th>
+                    {(user?.role === "superAdmin" || user?.role === "orgAdmin") && (
+                      <>
+                        <th className="px-4 py-3">Join Code</th>
+                        <th className="px-4 py-3">Actions</th>
+                        <th className="px-4 py-3">Users</th>
+                      </>
+                    )}
+                    {user?.role === "deptAdmin" && <th className="px-4 py-3">Users</th>}
                   </tr>
                 </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="p-3 border">{u.name}</td>
-                      <td className="p-3 border">{u.email}</td>
-                      <td className="p-3 border">{u.role}</td>
-                      <td className="p-3 border">{u.organization || "—"}</td>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {orgs.map((org) => (
+                    <tr key={org._id} className="hover:bg-gray-50/60">
+                      <td className="px-4 py-3 font-medium text-gray-900">{org.name}</td>
+                      <td className="px-4 py-3">
+                        <Pill tone="info" >
+                          {org.type}
+                        </Pill>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {org.parentId?.name || "—"}
+                      </td>
+
+                      {(user?.role === "superAdmin" || user?.role === "orgAdmin") && (
+                        <>
+                          <td className="px-4 py-3">
+                            {org.joinCode ? (
+                              <code className="px-2 py-1 rounded-md bg-gray-100 text-gray-800">
+                                {org.joinCode}
+                              </code>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Btn tone="warn" onClick={() => handleEdit(org)}>Edit</Btn>
+                              <Btn tone="danger" onClick={() => handleDelete(org._id)}>Delete</Btn>
+                              <Btn
+                                tone="success"
+                                disabled={regeneratingId === org._id}
+                                onClick={() => handleRegenerateCode(org._id)}
+                              >
+                                {regeneratingId === org._id ? "Regenerating…" : "Regenerate Code"}
+                              </Btn>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Btn tone="outline" onClick={() => handleSelectOrgUsers(org._id)}>
+                              View Users
+                            </Btn>
+                          </td>
+                        </>
+                      )}
+
+                      {(user?.role === "deptAdmin" || (!user?.role || user?.role === "user")) && (
+                        <td className="px-4 py-3">
+                          <Btn
+                            tone="outline"
+                            onClick={() => handleSelectOrgUsers(org._id)}
+                            disabled={!(user?.role === "deptAdmin")}
+                            className={!(user?.role === "deptAdmin") ? "opacity-60 cursor-not-allowed" : ""}
+                          >
+                            View Users
+                          </Btn>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </Table>
+          )}
+        </Section>
+
+        {/* Users under selected org */}
+        {selectedOrgId && (
+          <Section
+            title="Users"
+            subtitle="Members associated with the selected organisation / department."
+          >
+            {userLoading ? (
+              <div className="flex items-center gap-3 text-gray-600">
+                <Loader />
+                <span className="text-sm">Loading users…</span>
+              </div>
+            ) : userError ? (
+              <p className="text-red-600">{userError}</p>
+            ) : users.length === 0 ? (
+              <EmptyState title="No users found." />
+            ) : (
+              <Table>
+                <table className="min-w-full divide-y divide-gray-200 bg-white">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Role</th>
+                      <th className="px-4 py-3">Organization</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-sm">
+                    {users.map((u) => (
+                      <tr key={u.id} className="hover:bg-gray-50/60">
+                        <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
+                        <td className="px-4 py-3">{u.email}</td>
+                        <td className="px-4 py-3"><BadgeRole role={u.role} /></td>
+                        <td className="px-4 py-3">{u.organization || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Table>
             )}
 
-            {/* Add user form - Only for admins */}
             {(user?.role === "superAdmin" || user?.role === "orgAdmin" || user?.role === "deptAdmin") && (
-              <form onSubmit={handleAddUser} className="mt-6 space-y-4 p-4 border rounded shadow-inner bg-gray-50">
-                <h4 className="text-xl font-semibold">Add New User</h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    className="border p-3 rounded-md w-full"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    required
-                    disabled={addingUser}
-                  />
-                  
-                  <select
-                    className="border p-3 rounded-md w-full"
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    disabled={addingUser}
-                  >
-                    <option value="user">User</option>
-                    <option value="deptAdmin">Dept Admin</option>
-                    <option value="orgAdmin">Org Admin</option>
-                    {/* Only superAdmin can assign superAdmin role */}
-                    {user.role === "superAdmin" && <option value="superAdmin">Super Admin</option>}
-                  </select>
+              <div className="mt-6">
+                <div className="rounded-2xl border border-dashed border-gray-300 p-6 bg-gray-50">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Add New User</h4>
+                  <form onSubmit={handleAddUser} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Input
+                        type="email"
+                        placeholder="Email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        required
+                        disabled={addingUser}
+                      />
+                      <Select
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                        disabled={addingUser}
+                      >
+                        <option value="user">User</option>
+                        <option value="deptAdmin">Dept Admin</option>
+                        <option value="orgAdmin">Org Admin</option>
+                        {user.role === "superAdmin" && <option value="superAdmin">Super Admin</option>}
+                      </Select>
+                      <div className="md:col-span-2 flex items-center">
+                        <Btn type="submit" tone="success" disabled={addingUser}>
+                          {addingUser ? "Adding…" : "Add User"}
+                        </Btn>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      A join request will be sent to the user for approval.
+                    </p>
+                  </form>
                 </div>
-                <button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition"
-                  disabled={addingUser}
-                >
-                  {addingUser ? "Adding..." : "Add User"}
-                </button>
-              </form>
+              </div>
             )}
-          </div>
+          </Section>
         )}
 
-        <p className="mt-4 text-sm text-gray-600 text-center">
-          * You can set department admins during creation/editing. Join codes are generated automatically. Only authorized admins can see/edit actions.
+        <p className="text-center text-xs text-gray-500">
+          * Department admins can be set during creation or editing. Join codes are generated automatically. Only authorised admins may perform restricted actions.
         </p>
       </div>
     </div>
