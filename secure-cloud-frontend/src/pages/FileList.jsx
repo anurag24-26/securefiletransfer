@@ -6,7 +6,7 @@ import Loader from "../components/Loader";
 import bgImage from "../assets/back1.jpg";
 
 const FilesDashboard = () => {
-  const { token } = useAuth();
+  const { token,user } = useAuth();
   const [activeTab, setActiveTab] = useState("upload");
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,8 +20,11 @@ const FilesDashboard = () => {
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
+const [fileToDelete, setFileToDelete] = useState(null);
+  const [selectedFileUrl, setSelectedFileUrl] = useState(null); // For in-site view
+  const [selectedFileName, setSelectedFileName] = useState("");
 
-  // Fetch visibility targets for upload form
+  // Fetch visibility targets
   useEffect(() => {
     if (!token) return;
     const fetchTargets = async () => {
@@ -49,7 +52,7 @@ const FilesDashboard = () => {
         const res = await api.get("/files/visible-files", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setFiles(res.data.files);
+        setFiles(res.data.files || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -111,13 +114,63 @@ const FilesDashboard = () => {
       setLoading(false);
     }
   };
+const handleDelete = async (file) => {
+  console.log("Deleting file:", file);
+  if (!file) return;
+  const fileId = file._id || file.id;
+  console.log("File ID:", fileId);
+  if (!fileId) return;
+  
+  try {
+    setLoading(true);
+    await api.delete(`/files/delete/${fileId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setMessage("File deleted successfully!");
+    setFiles((prev) => prev.filter((f) => f._id !== fileId && f.id !== fileId));
+  } catch (err) {
+    console.error(err);
+    setMessage(err.response?.data?.message || "Error deleting file.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleDownload = (filename) => {
+
+  const handleView = async (fileId) => {
+  try {
+    const res = await api.get(`/files/download/${fileId}`, {
+      responseType: "blob",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    setSelectedFileUrl(url);
+    const fileObj = files.find(f => f.id === fileId || f._id === fileId);
+    setSelectedFileName(fileObj?.originalName || "file");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    setMessage("Unable to preview this file.");
+  }
+};
+
+const handleDownload = async (fileId) => {
+  try {
+    const res = await api.get(`/files/download/${fileId}`, {
+      responseType: "blob",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement("a");
-    link.href = `${process.env.REACT_APP_API_URL}/uploads/${filename}`;
-    link.download = filename;
+    const fileObj = files.find(f => f.id === fileId || f._id === fileId);
+    link.href = url;
+    link.setAttribute("download", fileObj?.originalName || "file");
+    document.body.appendChild(link);
     link.click();
-  };
+    document.body.removeChild(link);
+  } catch (err) {
+    setMessage("Unable to download the file.");
+  }
+};
 
   return (
     <div
@@ -127,14 +180,16 @@ const FilesDashboard = () => {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
 
-      {/* Main container */}
-      <div className="relative z-10 w-full max-w-6xl">
+      <div className="relative z-10 w-full max-w-7xl">
         {/* Tabs */}
         <div className="flex justify-center mb-10 space-x-4">
           {["upload", "visible"].map((tab) => (
             <motion.button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                setSelectedFileUrl(null);
+              }}
               whileHover={{ scale: 1.05 }}
               className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
                 activeTab === tab
@@ -147,7 +202,33 @@ const FilesDashboard = () => {
           ))}
         </div>
 
-        {/* Content */}
+        {/* File Viewer */}
+        {selectedFileUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-10 bg-white/20 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl p-6"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">
+                Viewing: {selectedFileName}
+              </h3>
+              <button
+                onClick={() => setSelectedFileUrl(null)}
+                className="text-red-400 hover:text-red-500 font-semibold"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <iframe
+              src={selectedFileUrl}
+              title="File Viewer"
+              className="w-full h-[600px] rounded-xl border border-white/30 bg-white"
+            ></iframe>
+          </motion.div>
+        )}
+
+        {/* Upload / Visible Tabs */}
         <AnimatePresence mode="wait">
           {activeTab === "upload" ? (
             <motion.div
@@ -282,7 +363,7 @@ const FilesDashboard = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {files.map((file, index) => (
                     <motion.div
-                      key={file._id}
+                      key={file.id}
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{
@@ -294,39 +375,70 @@ const FilesDashboard = () => {
                       className="relative bg-white/15 backdrop-blur-lg rounded-3xl p-6 border border-white/30 shadow-2xl hover:shadow-purple-700/40 transition duration-300"
                     >
                       <h3 className="text-xl font-semibold text-white mb-3 truncate">
-                        {file.originalName}
+                        {file.description || "No description available."}
                       </h3>
 
                       <div className="text-gray-200 text-sm space-y-1">
                         <p>
                           <span className="font-semibold text-purple-300">
-                            Type:
-                          </span>{" "}
-                          {file.type || "N/A"}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-purple-300">
                             Uploaded By:
                           </span>{" "}
-                          {file.uploadedBy?.name || "Unknown"}
+                          {file.uploadedBy?.name || "Unknown"}{" "}
+                          <span className="text-gray-400 text-xs">
+                            ({file.uploadedBy?.role || "N/A"})
+                          </span>
                         </p>
                         <p>
                           <span className="font-semibold text-purple-300">
-                            Visibility:
+                            Organization:
                           </span>{" "}
-                          {file.visibleToType}
+                          {file.organization?.name || "N/A"}{" "}
+                          <span className="text-gray-400 text-xs">
+                            ({file.organization?.type || "N/A"})
+                          </span>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-purple-300">
+                            Uploaded On:
+                          </span>{" "}
+                          {new Date(file.uploadedAt).toLocaleString()}
                         </p>
                       </div>
 
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleDownload(file.filename)}
-                        className="w-full mt-5 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition"
-                      >
-                        Download
-                      </motion.button>
+                      <div className="flex gap-2 mt-5">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                         onClick={() => handleView(file.id || file._id)}
+                          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 transition"
+                        >
+                          View
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                         onClick={() => handleDownload(file.id || file._id)}
+                          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-pink-700 transition"
+                        >
+                          Download
+                        </motion.button>
+                      {((file.uploadedBy?._id === user?.id || file.uploadedBy?.id === user?.id) || user?.role === "superAdmin") && (
+  <motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  onClick={() => handleDelete(file)}
+  className="flex-1 py-2 rounded-xl bg-red-600 text-white font-semibold shadow-lg hover:bg-red-700 transition"
+>
+  Delete
+</motion.button>
+
+)}
+
+
+                      </div>
                     </motion.div>
+                    
                   ))}
                 </div>
               )}
