@@ -6,6 +6,8 @@ const api = axios.create({
   timeout: 15000,
 });
 //https://securefiletransfer-0kub.onrender.com
+//http://localhost:5000/api
+
 // Function to set or remove Authorization header
 export const setAuthToken = (token) => {
   if (token) {
