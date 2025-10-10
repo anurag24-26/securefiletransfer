@@ -3,6 +3,8 @@ const multer = require("multer");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
+
 const router = express.Router();
 
 const File = require("../models/File");
@@ -10,7 +12,9 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
-// Multer setup
+/* ============================================================
+   🔹 Multer Setup
+============================================================ */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/";
@@ -24,7 +28,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Encryption setup
+/* ============================================================
+   🔹 Encryption Helpers
+============================================================ */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
   ? Buffer.from(process.env.ENCRYPTION_KEY, "hex")
   : crypto.randomBytes(32);
@@ -33,10 +39,8 @@ const IV_LENGTH = 16;
 function encryptFile(inputPath, outputPath) {
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
-
   const input = fs.createReadStream(inputPath);
   const output = fs.createWriteStream(outputPath);
-
   input.pipe(cipher).pipe(output);
 
   return new Promise((resolve, reject) => {
@@ -45,7 +49,23 @@ function encryptFile(inputPath, outputPath) {
   });
 }
 
-// Helper to get all organization hierarchy
+function decryptFile(inputPath, outputPath, ivHex) {
+  return new Promise((resolve, reject) => {
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+    const input = fs.createReadStream(inputPath);
+    const output = fs.createWriteStream(outputPath);
+
+    input.pipe(decipher).pipe(output);
+
+    output.on("finish", () => resolve(true));
+    output.on("error", reject);
+  });
+}
+
+/* ============================================================
+   🔹 Helper: Get All Org IDs (Recursive)
+============================================================ */
 async function getAllOrgIds(orgId) {
   const ids = [orgId];
   const children = await Organization.find({ parentId: orgId });
@@ -56,7 +76,7 @@ async function getAllOrgIds(orgId) {
 }
 
 /* ============================================================
-   🔹 ROUTE 1: Get visibility targets based on user role
+   🔹 ROUTE 1: Get Visibility Targets
 ============================================================ */
 router.get("/visibility-targets", authMiddleware, async (req, res) => {
   try {
@@ -88,7 +108,7 @@ router.get("/visibility-targets", authMiddleware, async (req, res) => {
 });
 
 /* ============================================================
-   🔹 ROUTE 2: Upload file with visibility control
+   🔹 ROUTE 2: Upload File
 ============================================================ */
 router.post("/upload", authMiddleware, upload.single("file"), async (req, res) => {
   try {
@@ -99,45 +119,44 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
     const user = await User.findById(req.user.userId).populate("orgId");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Parse visibility info from frontend
+    // Convert visibleTo to array of ObjectIds
     let visibilityTargets = [];
     if (visibleTo) {
-      visibilityTargets = Array.isArray(visibleTo)
-        ? visibleTo
-        : visibleTo.split(",");
+      const idsArray = Array.isArray(visibleTo) ? visibleTo : visibleTo.split(",");
+      visibilityTargets = idsArray.map(id => new mongoose.Types.ObjectId(id));
+    } else {
+      visibilityTargets = [new mongoose.Types.ObjectId(user._id)];
     }
 
+    // Encrypt file
     const encryptedPath = `uploads/encrypted-${file.filename}`;
     const iv = await encryptFile(file.path, encryptedPath);
-    fs.unlinkSync(file.path);
+    fs.unlinkSync(file.path); // remove original unencrypted file
 
+    // Save file document
     const newFile = new File({
       filename: `encrypted-${file.filename}`,
       originalName: file.originalname,
-      description,
-      orgId: user.orgId || null,
-      uploadedBy: user._id,
+      description: description || "",
+      orgId: user.orgId ? new mongoose.Types.ObjectId(user.orgId._id) : null,
+      uploadedBy: new mongoose.Types.ObjectId(user._id),
       encrypted: true,
       iv,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
-      visibleTo: visibilityTargets.length ? visibilityTargets : [user._id],
+      visibleTo: visibilityTargets,
       visibleToType: visibleToType || "User",
       audit: [
         {
           action: "upload",
-          user: user._id,
+          user: new mongoose.Types.ObjectId(user._id),
           timestamp: new Date(),
-          details: `${user.name} uploaded file`,
+          details: `${user.name} uploaded a file`,
         },
       ],
     });
 
     await newFile.save();
-
-    res.status(201).json({
-      message: "File uploaded & encrypted successfully",
-      file: newFile,
-    });
+    res.status(201).json({ message: "File uploaded successfully", file: newFile });
   } catch (err) {
     console.error("Upload Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -145,7 +164,7 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
 });
 
 /* ============================================================
-   🔹 ROUTE 3: Get files visible to the logged-in user
+   🔹 ROUTE 3: Visible Files for User
 ============================================================ */
 router.get("/visible-files", authMiddleware, async (req, res) => {
   try {
@@ -156,22 +175,42 @@ router.get("/visible-files", authMiddleware, async (req, res) => {
     if (user.orgId) orgIds = await getAllOrgIds(user.orgId);
 
     const conditions = [
-      { visibleToType: "User", visibleTo: user._id },
-      { visibleToType: "Organization", visibleTo: { $in: orgIds } },
+      { visibleToType: "User", visibleTo: new mongoose.Types.ObjectId(user._id) },
+      {
+        visibleToType: "Organization",
+        visibleTo: { $in: orgIds.map(id => new mongoose.Types.ObjectId(id)) },
+      },
     ];
 
+    let files;
     if (user.role === "superAdmin") {
-      const files = await File.find()
+      files = await File.find()
+        .select("originalName description orgId uploadedBy createdAt expiryDate")
         .populate("uploadedBy", "name email role")
         .populate("orgId", "name type");
-      return res.json({ count: files.length, files });
+    } else {
+      files = await File.find({ $or: conditions })
+        .select("originalName description orgId uploadedBy createdAt expiryDate")
+        .populate("uploadedBy", "name email role")
+        .populate("orgId", "name type");
     }
 
-    const files = await File.find({ $or: conditions })
-      .populate("uploadedBy", "name email role")
-      .populate("orgId", "name type");
+    const responseData = files.map(f => ({
+      id: f._id,
+      filename: f.filename,
+      originalName: f.originalName,
+      description: f.description || "No description provided",
+      organization: f.orgId
+        ? { id: f.orgId._id, name: f.orgId.name, type: f.orgId.type }
+        : null,
+      uploadedBy: f.uploadedBy
+        ? { id: f.uploadedBy._id, name: f.uploadedBy.name, role: f.uploadedBy.role }
+        : null,
+      uploadedAt: f.createdAt,
+      expiryDate: f.expiryDate || null,
+    }));
 
-    res.json({ count: files.length, files });
+    res.json({ count: responseData.length, files: responseData });
   } catch (err) {
     console.error("Fetch files error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -179,38 +218,51 @@ router.get("/visible-files", authMiddleware, async (req, res) => {
 });
 
 /* ============================================================
-//    🔹 ROUTE 4: Delete file (only uploader or super/org admin)
-// ============================================================ */
-// router.delete("/:id", authMiddleware, async (req, res) => {
-//   try {
-//     const file = await File.findById(req.params.id);
-//     if (!file) return res.status(404).json({ message: "File not found" });
+   🔹 ROUTE 4: Download a File (Decryption + Serve)
+============================================================ */
+router.get("/download/:id", authMiddleware, async (req, res) => {
+  try {
+    const file = await File.findById(req.params.id);
+    if (!file) return res.status(404).json({ message: "File not found" });
 
-//     const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).populate("orgId");
+    const orgIds = user.orgId ? (await getAllOrgIds(user.orgId)).map(String) : [];
 
-//     if (
-//       file.uploadedBy.toString() !== req.user.userId &&
-//       !["superAdmin", "orgAdmin"].includes(user.role)
-//     ) {
-//       return res.status(403).json({ message: "Not authorized to delete this file" });
-//     }
+    if (file.expiryDate && new Date() > new Date(file.expiryDate)) {
+      return res.status(403).json({ message: "File has expired." });
+    }
 
-//     const filePath = path.join("uploads", file.filename);
-//     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    const canView =
+      user.role === "superAdmin" ||
+      (file.visibleToType === "User" &&
+        file.visibleTo.map(String).includes(String(user._id))) ||
+      (file.visibleToType === "Organization" &&
+        file.visibleTo.map(String).some(id => orgIds.includes(String(id))));
 
-//     await file.deleteOne();
+    if (!canView) {
+      return res.status(403).json({ message: "Not authorized to download this file" });
+    }
 
-//     res.json({ message: "File deleted successfully" });
-//   } catch (err) {
-//     console.error("Delete Error:", err);
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
+    const encryptedPath = path.join("uploads", file.filename);
+    if (!fs.existsSync(encryptedPath)) {
+      return res.status(404).json({ message: "Encrypted file not found" });
+    }
 
+    const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
+    await decryptFile(encryptedPath, tempPath, file.iv);
 
+    res.download(tempPath, file.originalName, (err) => {
+      if (err) console.error("Download error:", err);
+      fs.unlink(tempPath, () => {}); // cleanup temp file
+    });
+  } catch (err) {
+    console.error("Download Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
 
 /* ============================================================
-   🔹 ROUTE: Get all files uploaded by the logged-in user
+   🔹 ROUTE 5: My Uploaded Files
 ============================================================ */
 router.get("/my-files", authMiddleware, async (req, res) => {
   try {
@@ -226,31 +278,46 @@ router.get("/my-files", authMiddleware, async (req, res) => {
 });
 
 /* ============================================================
-   🔹 ROUTE: Get single file info (for download or details)
+   🔹 ROUTE: Delete a File
 ============================================================ */
-router.get("/:id", authMiddleware, async (req, res) => {
+router.delete("/delete/:id", authMiddleware, async (req, res) => {
   try {
-    const file = await File.findById(req.params.id)
-      .populate("uploadedBy", "name email role")
-      .populate("orgId", "name type");
+    const { id } = req.params;
 
-    if (!file) return res.status(404).json({ message: "File not found" });
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid file ID." });
+    }
 
-    // Check visibility
+    // Find the file
+    const file = await File.findById(id);
+    if (!file) return res.status(404).json({ message: "File not found." });
+
+    // Find the user
     const user = await User.findById(req.user.userId).populate("orgId");
-    const orgIds = user.orgId ? await getAllOrgIds(user.orgId) : [];
-    const canView =
-      file.visibleToType === "User" && file.visibleTo.includes(user._id.toString()) ||
-      file.visibleToType === "Organization" && file.visibleTo.some((id) => orgIds.includes(id.toString())) ||
-      file.visibleToType === "Department" && file.visibleTo.includes(user._id.toString()) || // adjust if needed
-      ["superAdmin"].includes(user.role);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!canView)
-      return res.status(403).json({ message: "Not authorized to view this file" });
+    // Authorization: uploader or superAdmin can delete
+    const canDelete =
+      user.role === "superAdmin" || String(file.uploadedBy) === String(user._id);
 
-    res.json({ file });
+    if (!canDelete) {
+      return res.status(403).json({ message: "Not authorized to delete this file." });
+    }
+
+    // Delete file from disk
+   const filePath = path.join("uploads", file.originalName);
+if (fs.existsSync(filePath)) {
+  fs.unlinkSync(filePath);
+}
+
+
+    // Remove from DB
+    await File.findByIdAndDelete(id);
+
+    res.json({ message: "File deleted successfully." });
   } catch (err) {
-    console.error("Fetch file error:", err);
+    console.error("Delete Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
