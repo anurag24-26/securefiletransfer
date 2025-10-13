@@ -1,16 +1,42 @@
-# React + Vite
+# 🔒 Secure File Transfer System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A secure cloud-based file sharing platform built with MERN (MongoDB, Express, React, Node.js) and AWS integration, designed for **hierarchical organizations such as universities, hospitals, or businesses.  
+It ensures end-to-end encryption, **access control, **audit logging, and **time-limited file sharing — making it safer than typical cloud drives.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## React Compiler
+### 🔐 Core Functionalities
+- Secure File Upload & Download – Files are encrypted before storage and verified before download.  
+- Expiry System – Files automatically expire after a set time limit.  
+- Audit Logs – Every upload, download, and delete action is recorded.  
+- Organization Hierarchy – Multi-level access control (e.g., Admin → Department → User).  
+- Visibility Control – Define who can access each file (organization-wide, department, or specific user).  
+- File Type Classification – Each file is tagged with its type (confidential, report, public, etc.).  
+- Time-Limited Sharing – Generate share links that automatically expire.  
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🧩 Additional Highlights
+- JWT-based authentication and authorization.  
+- Role-based access system (Admin, Manager, Employee).  
+- Cloud integration with AWS S3 or other secure storage.  
+- Fully responsive React frontend with dashboards and data tables.  
+- Activity tracking and logs for compliance and auditing.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🏗 Tech Stack
+
+| Category | Technology |
+|-----------|-------------|
+| Frontend | React.js, Axios, Tailwind CSS |
+| Backend | Node.js, Express.js |
+| Database | MongoDB (Mongoose ODM) |
+| Cloud Storage | AWS S3 / Cloud Provider |
+| Authentication | JWT Tokens + Bcrypt |
+| Encryption | AES-256 / Crypto module |
+| Version Control | Git & GitHub |
+
+---
+
+## 📁 Folder Structure
