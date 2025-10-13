@@ -5,6 +5,10 @@ const api = axios.create({
   timeout: 15000,
 });
 
+
+//http:localhost:5000/api <-- local host address where backend is running
+
+
 // --- ✅ NEW: Load token from localStorage on startup
 const token = localStorage.getItem("token");
 if (token) {
