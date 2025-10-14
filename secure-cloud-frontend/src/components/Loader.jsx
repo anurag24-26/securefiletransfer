@@ -86,7 +86,7 @@ const Loader = () => {
         transition={{ duration: 1.5, delay: 0.5 }}
         className="text-slate-300 mt-3 text-sm md:text-base tracking-widest uppercase drop-shadow-md"
       >
-        Securing your cloud...
+        Securing your cloud..
       </motion.p>
     </div>
   );
