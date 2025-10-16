@@ -3,6 +3,8 @@ import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
+import { motion, AnimatePresence } from "framer-motion";
+
 const AdminSettings = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -16,12 +18,10 @@ const AdminSettings = () => {
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(null);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!token) navigate("/login");
   }, [token, navigate]);
 
-  // Fetch all necessary data
   useEffect(() => {
     if (!token || !user) return;
 
@@ -29,24 +29,16 @@ const AdminSettings = () => {
       setLoading(true);
       setError(null);
 
-      // Only admins can access
       if (!["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
         navigate("/");
         return;
       }
 
       try {
-        // 🧩 Get all users, orgs, and pending requests
         const [usersRes, deptRes, reqRes] = await Promise.all([
-          api.get("/requests/users/list", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          api.get("/requests/departments/list", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          api.get("/requests", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          api.get("/requests/users/list", { headers: { Authorization: `Bearer ${token}` } }),
+          api.get("/requests/departments/list", { headers: { Authorization: `Bearer ${token}` } }),
+          api.get("/requests", { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         setAllUsers(usersRes.data.users || []);
@@ -62,7 +54,6 @@ const AdminSettings = () => {
     fetchData();
   }, [token, user, navigate]);
 
-  // 📤 Send admin promotion request
   const handleSendRequest = async () => {
     if (!selectedUserId || !selectedDeptId) {
       alert("Please select both user and department.");
@@ -72,12 +63,7 @@ const AdminSettings = () => {
     try {
       await api.post(
         "/requests",
-        {
-          type: "admin",
-          targetUser: selectedUserId,
-          departmentId: selectedDeptId,
-          requestedRole: "deptAdmin",
-        },
+        { type: "admin", targetUser: selectedUserId, departmentId: selectedDeptId, requestedRole: "deptAdmin" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -87,7 +73,6 @@ const AdminSettings = () => {
     }
   };
 
-  // ✅ Handle approve/reject request
   const handleRequestResponse = async (requestId, action) => {
     setProcessing(requestId);
     try {
@@ -106,38 +91,30 @@ const AdminSettings = () => {
     }
   };
 
-   if (loading) {
-    return (
-      <>
-    <Loader/>
-    </>
-    );
-  }
-
-  if (error) {
+  if (loading) return <Loader />;
+  if (error)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-red-500 text-lg">{error}</p>
       </div>
     );
-  }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
-      <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">
+    <div className="min-h-screen p-4 sm:p-6 md:p-10 bg-gradient-to-tr from-gray-100 via-gray-200 to-gray-300 flex flex-col items-center">
+      <h2 className="text-3xl sm:text-4xl font-extrabold mb-10 text-center text-gray-800 drop-shadow-md">
         Admin Settings
       </h2>
 
       {/* --- Assign Department Admin Section --- */}
-      <section className="mb-10">
-        <h3 className="text-xl font-semibold mb-4 text-gray-700">
+      <section className="w-full max-w-3xl mb-10 p-6 bg-white/40 backdrop-blur-xl rounded-3xl shadow-2xl space-y-4 sm:space-y-6 transition hover:shadow-indigo-500/30 hover:scale-105 transform">
+        <h3 className="text-xl font-semibold text-gray-700 text-center sm:text-left">
           Assign Department Admin
         </h3>
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="border border-gray-300 rounded-md p-3 flex-1 focus:outline-blue-500"
+            className="flex-1 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-400 outline-none backdrop-blur-sm"
           >
             <option value="">Select User</option>
             {allUsers.map((u) => (
@@ -150,7 +127,7 @@ const AdminSettings = () => {
           <select
             value={selectedDeptId}
             onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="border border-gray-300 rounded-md p-3 flex-1 focus:outline-blue-500"
+            className="flex-1 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-400 outline-none backdrop-blur-sm"
           >
             <option value="">Select Department</option>
             {departments.map((d) => (
@@ -162,7 +139,7 @@ const AdminSettings = () => {
 
           <button
             onClick={handleSendRequest}
-            className="bg-blue-600 text-white rounded-md px-6 py-3 hover:bg-blue-700 transition duration-200 font-semibold"
+            className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-semibold hover:scale-105 transition transform shadow-lg hover:shadow-purple-400/50"
           >
             Send Request
           </button>
@@ -170,51 +147,50 @@ const AdminSettings = () => {
       </section>
 
       {/* --- Pending Requests Section --- */}
-      <section>
-        <h3 className="text-xl font-semibold mb-4 text-gray-700">
+      <section className="w-full max-w-3xl space-y-6">
+        <h3 className="text-xl font-semibold mb-4 text-gray-700 text-center sm:text-left">
           Pending Requests
         </h3>
         {requests.length === 0 ? (
-          <p className="text-gray-600">No pending requests.</p>
+          <p className="text-gray-600 text-center">No pending requests.</p>
         ) : (
           <div className="space-y-4">
-            {requests.map((req) => (
-              <div
-                key={req._id}
-                className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border border-gray-300 rounded-md hover:shadow"
-              >
-                <div className="mb-3 md:mb-0">
-                  <span className="font-semibold text-gray-800">
-                    {req.sender?.name || "Unknown"}
-                  </span>{" "}
-                  <span className="text-gray-500">&rarr;</span>{" "}
-                  <span className="font-medium text-blue-600">
-                    {req.departmentId?.name ||
-                      req.orgId?.name ||
-                      "Unassigned"}
-                  </span>{" "}
-                  <span className="ml-2 text-gray-600 text-sm">
-                    ({req.type})
-                  </span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    disabled={processing === req._id}
-                    onClick={() => handleRequestResponse(req._id, "approve")}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    disabled={processing === req._id}
-                    onClick={() => handleRequestResponse(req._id, "reject")}
-                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
-                </div>
-              </div>
-            ))}
+            <AnimatePresence>
+              {requests.map((req) => (
+                <motion.div
+                  key={req._id}
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-300 rounded-2xl bg-white/30 backdrop-blur-xl shadow-md hover:shadow-indigo-400/40 transition transform hover:scale-105"
+                >
+                  <div className="mb-3 sm:mb-0 text-center sm:text-left space-y-1">
+                    <p className="font-semibold text-gray-800">{req.sender?.name || "Unknown"}</p>
+                    <p className="text-blue-600 font-medium">
+                      {req.departmentId?.name || req.orgId?.name || "Unassigned"}{" "}
+                      <span className="text-gray-500 text-sm">({req.type})</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-3 justify-center sm:justify-end">
+                    <button
+                      disabled={processing === req._id}
+                      onClick={() => handleRequestResponse(req._id, "approve")}
+                      className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 disabled:opacity-50 transition transform hover:scale-105 shadow"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      disabled={processing === req._id}
+                      onClick={() => handleRequestResponse(req._id, "reject")}
+                      className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 disabled:opacity-50 transition transform hover:scale-105 shadow"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </section>
