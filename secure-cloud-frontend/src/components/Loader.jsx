@@ -63,7 +63,7 @@ const Loader = () => {
           src={logo}
           alt="Logo"
           className="w-20 h-20 rounded-full shadow-[0_0_35px_6px_rgba(99,102,241,0.6)]"
-          animate={{ rotate: 360 }}
+          
           transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
         />
       </div>
