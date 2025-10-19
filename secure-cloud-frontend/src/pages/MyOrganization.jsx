@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiOutlineXCircle, HiOutlineUserCircle } from "react-icons/hi";
 import { HiOutlineBuildingLibrary, HiOutlineUserGroup, HiOutlineIdentification } from "react-icons/hi2";
-import defaultBg from "../assets/back2.jpg";
+import defaultBg from "../assets/Back2.jpg";
 
 const MyOrganization = ({ backgroundImage }) => {
   const { token, setUser } = useAuth();
