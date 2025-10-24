@@ -406,14 +406,14 @@ const handleDownload = async (fileId) => {
                       </div>
 
                       <div className="flex gap-2 mt-5">
-                        <motion.button
+                       {/*<motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                          onClick={() => handleView(file.id || file._id)}
                           className="flex-1 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 transition"
                         >
                           View
-                        </motion.button>
+                        </motion.button> */}
 
                         <motion.button
                           whileHover={{ scale: 1.05 }}
