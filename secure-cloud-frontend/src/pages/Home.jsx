@@ -146,7 +146,7 @@ const Home = () => {
                 </>
               ) : (
                 <>
-                  <FaEdit /> Edit profile
+                  <FaEdit /> Edit Profile
                 </>
               )}
             </motion.button>
