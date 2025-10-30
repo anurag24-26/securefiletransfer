@@ -5,7 +5,7 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
 import { motion } from "framer-motion";
-import bgImage from "../assets/back2.jpg";
+import bgImage from "../assets/Back2.jpg";
 import { FaEdit, FaTimes, FaUserCircle } from "react-icons/fa";
 
 const Home = () => {
