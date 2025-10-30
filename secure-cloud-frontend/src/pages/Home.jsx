@@ -222,7 +222,7 @@ const Home = () => {
 
             <div>
               <label className="block text-blue-200 mb-2 font-medium text-lg">
-                Name
+                Name.
               </label>
               <input
                 type="text"
