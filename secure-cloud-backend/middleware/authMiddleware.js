@@ -15,6 +15,7 @@ const authMiddleware = (req, res, next) => {
     req.user = {
       userId: decoded.id || decoded.userId, // your token should have id
       role: decoded.role,
+      orgId: decoded.orgId || null,
     };
     next();
   } catch (error) {
