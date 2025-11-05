@@ -362,8 +362,8 @@ const handleDownload = async (fileId) => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {files.map((file, index) => (
-                    <motion.div
-                      key={file.id}
+                   <motion.div key={file.id || file._id}
+
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{
