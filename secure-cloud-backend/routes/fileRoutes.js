@@ -1,3 +1,4 @@
+// routes/files.js
 const express = require("express");
 const multer = require("multer");
 const crypto = require("crypto");
@@ -15,6 +16,7 @@ const { authMiddleware } = require("../middleware/authMiddleware");
 
 /* ============================================================
    🔹 Multer Setup
+   (unchanged from your original)
 ============================================================ */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -30,7 +32,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ============================================================
-   🔹 Encryption Helpers
+   🔹 Encryption Helpers (unchanged)
 ============================================================ */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
   ? Buffer.from(process.env.ENCRYPTION_KEY, "hex")
@@ -65,7 +67,7 @@ function decryptFile(inputPath, outputPath, ivHex) {
 }
 
 /* ============================================================
-   🔹 Helper: Get All Org IDs (Recursive)
+   🔹 Helper: Get All Org IDs (Recursive) (unchanged)
 ============================================================ */
 async function getAllOrgIds(orgId) {
   const ids = [orgId];
@@ -74,6 +76,27 @@ async function getAllOrgIds(orgId) {
     ids.push(...(await getAllOrgIds(child._id)));
   }
   return ids;
+}
+
+/* ============================================================
+   🔹 Centralized Audit Helper
+   Use createAudit(req, userId, fileId, action, details)
+   so you don't have to repeat AuditLog.create(...) everywhere.
+============================================================ */
+async function createAudit(req, userId, fileId, action, details) {
+  try {
+    await AuditLog.create({
+      user: userId,
+      file: fileId,
+      action,
+      details,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+  } catch (err) {
+    // Do NOT block main flow if audit logging fails; just log server-side.
+    console.error("Audit creation failed:", err);
+  }
 }
 
 /* ============================================================
@@ -110,6 +133,8 @@ router.get("/visibility-targets", authMiddleware, async (req, res) => {
 
 /* ============================================================
    🔹 ROUTE 2: Upload File
+   - encrypt locally -> upload encrypted to Backblaze via s3Client
+   - store file doc in DB and add audit via createAudit
 ============================================================ */
 router.post("/upload", authMiddleware, upload.single("file"), async (req, res) => {
   try {
@@ -129,27 +154,26 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
       visibilityTargets = [new mongoose.Types.ObjectId(user._id)];
     }
 
-    // Encrypt file
-    // Encrypt locally first
-const encryptedPath = `uploads/encrypted-${file.filename}`;
-const iv = await encryptFile(file.path, encryptedPath);
-fs.unlinkSync(file.path); // remove original unencrypted file
+    // Encrypt file locally
+    const encryptedPath = `uploads/encrypted-${file.filename}`;
+    const iv = await encryptFile(file.path, encryptedPath);
+    // remove original unencrypted file
+    try { fs.unlinkSync(file.path); } catch (e) {}
 
-// Upload encrypted file to Backblaze B2
-const s3 = require("../utils/s3Client");
-const fileBuffer = fs.readFileSync(encryptedPath);
+    // Upload encrypted file to Backblaze B2 (S3-compatible)
+    const s3 = require("../utils/s3Client");
+    const fileBuffer = fs.readFileSync(encryptedPath);
 
-await s3
-  .upload({
-    Bucket: process.env.B2_BUCKET_NAME,
-    Key: `encrypted/${file.filename}`,
-    Body: fileBuffer,
-  })
-  .promise();
+    await s3
+      .upload({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: `encrypted/${file.filename}`,
+        Body: fileBuffer,
+      })
+      .promise();
 
-// Remove local encrypted copy after upload
-fs.unlinkSync(encryptedPath);
-
+    // Remove local encrypted copy after upload
+    try { fs.unlinkSync(encryptedPath); } catch (e) {}
 
     // Save file document
     const newFile = new File({
@@ -174,15 +198,9 @@ fs.unlinkSync(encryptedPath);
     });
 
     await newFile.save();
-    // Create audit log
-await AuditLog.create({
-  user: user._id,
-  file: newFile._id,
-  action: "upload",
-  details: `${user.name} uploaded the file "${file.originalname}"`,
-  ipAddress: req.ip,
-  userAgent: req.headers["user-agent"],
-});
+
+    // centralized audit
+    await createAudit(req, user._id, newFile._id, "upload", `${user.name} uploaded the file "${file.originalname}"`);
 
     res.status(201).json({ message: "File uploaded successfully", file: newFile });
   } catch (err) {
@@ -193,126 +211,128 @@ await AuditLog.create({
 
 /* ============================================================
    🔹 ROUTE 3: Visible Files for User
+   - includes files visible to user and files visible to their org
+   - handles superAdmin / orgAdmin / deptAdmin correctly
 ============================================================ */
 router.get("/visible-files", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).populate("orgId");
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Get organization hierarchy (for orgAdmin/deptAdmin)
     let orgIds = [];
     if (user.orgId) orgIds = await getAllOrgIds(user.orgId);
+    orgIds = orgIds.map(id => new mongoose.Types.ObjectId(id));
 
-    const conditions = [
-      { visibleToType: "User", visibleTo: new mongoose.Types.ObjectId(user._id) },
-      {
-        visibleToType: "Organization",
-        visibleTo: { $in: orgIds.map(id => new mongoose.Types.ObjectId(id)) },
-      },
-    ];
-
-    let files;
-    if (user.role === "superAdmin") {
-      files = await File.find()
-        .select("originalName description orgId uploadedBy createdAt expiryDate")
-        .populate("uploadedBy", "name email role")
-        .populate("orgId", "name type");
-    } else {
-      files = await File.find({ $or: conditions })
-        .select("originalName description orgId uploadedBy createdAt expiryDate")
-        .populate("uploadedBy", "name email role")
-        .populate("orgId", "name type");
+    // Also include the user’s own org for normal users (so they see org-shared files)
+    if (user.role !== "superAdmin" && user.orgId) {
+      // ensure user's org is included (avoid duplicates)
+      const ownOrgId = new mongoose.Types.ObjectId(user.orgId._id);
+      if (!orgIds.find(x => String(x) === String(ownOrgId))) orgIds.push(ownOrgId);
     }
 
-    const responseData = files.map(f => ({
-      id: f._id,
-      filename: f.filename,
-      originalName: f.originalName,
-      description: f.description || "No description provided",
-      organization: f.orgId
-        ? { id: f.orgId._id, name: f.orgId.name, type: f.orgId.type }
-        : null,
-      uploadedBy: f.uploadedBy
-        ? { id: f.uploadedBy._id, name: f.uploadedBy.name, role: f.uploadedBy.role }
-        : null,
-      uploadedAt: f.createdAt,
-      expiryDate: f.expiryDate || null,
-    }));
+    // Build query dynamically based on role
+    let query = {};
+    if (user.role === "superAdmin") {
+      query = {}; // all files
+    } else {
+      // For orgAdmin/deptAdmin and normal users, the same OR conditions apply:
+      query = {
+        $or: [
+          { visibleToType: "User", visibleTo: user._id },
+          { visibleToType: "Organization", visibleTo: { $in: orgIds } },
+        ],
+      };
+    }
 
-    res.json({ count: responseData.length, files: responseData });
+    const files = await File.find(query)
+      .select("originalName description orgId uploadedBy createdAt expiryDate filename")
+      .populate("uploadedBy", "name email role")
+      .populate("orgId", "name type")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ count: files.length, files });
   } catch (err) {
-    console.error("Fetch files error:", err);
+    console.error("Visible Files Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 /* ============================================================
    🔹 ROUTE 4: Download a File (Decryption + Serve)
+   - checks hierarchy and visibility
+   - downloads encrypted object from Backblaze, decrypts to temp, streams to client
+   - creates centralized audit entry for download
 ============================================================ */
 router.get("/download/:id", authMiddleware, async (req, res) => {
   try {
+    // Fetch file doc
     const file = await File.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
 
+    // Fetch user (and org)
     const user = await User.findById(req.user.userId).populate("orgId");
-    const orgIds = user.orgId ? (await getAllOrgIds(user.orgId)).map(String) : [];
+    if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Check expiry
     if (file.expiryDate && new Date() > new Date(file.expiryDate)) {
       return res.status(403).json({ message: "File has expired." });
     }
 
+    // Build orgIds list (include user's org for normal users)
+    let orgIds = user.orgId ? (await getAllOrgIds(user.orgId)).map(String) : [];
+    if (user.orgId && !orgIds.includes(String(user.orgId._id))) orgIds.push(String(user.orgId._id));
+
+    // Permission check (hierarchy-aware)
     const canView =
       user.role === "superAdmin" ||
-      (file.visibleToType === "User" &&
-        file.visibleTo.map(String).includes(String(user._id))) ||
-      (file.visibleToType === "Organization" &&
-        file.visibleTo.map(String).some(id => orgIds.includes(String(id))));
+      (file.visibleToType === "User" && file.visibleTo.map(String).includes(String(user._id))) ||
+      (file.visibleToType === "Organization" && file.visibleTo.map(String).some(id => orgIds.includes(String(id))));
 
     if (!canView) {
+      // helpful debug log (server-side)
+      console.warn(`Unauthorized download attempt by user ${user._id} for file ${file._id}`);
       return res.status(403).json({ message: "Not authorized to download this file" });
     }
 
-   const s3 = require("../utils/s3Client");
-const tempEncryptedPath = path.join("uploads", `temp-${file.filename}`);
+    // Download encrypted file from Backblaze (S3-compatible)
+    const s3 = require("../utils/s3Client");
+    const tempEncryptedPath = path.join("uploads", `temp-${file.filename}`);
 
-// Download encrypted file from Backblaze
-const fileData = await s3
-  .getObject({
-    Bucket: process.env.B2_BUCKET_NAME,
-    Key: `encrypted/${file.filename}`,
-  })
-  .promise();
+    const fileData = await s3
+      .getObject({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: `encrypted/${file.filename}`,
+      })
+      .promise();
 
-// Write encrypted data temporarily
-fs.writeFileSync(tempEncryptedPath, fileData.Body);
+    // Write encrypted data temporarily
+    fs.writeFileSync(tempEncryptedPath, fileData.Body);
 
-// Decrypt to temp output
-const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
-await decryptFile(tempEncryptedPath, tempPath, file.iv);
+    // Decrypt to temp output path
+    const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
+    await decryptFile(tempEncryptedPath, tempPath, file.iv);
 
-// Remove temp encrypted copy
-fs.unlinkSync(tempEncryptedPath);
+    // Remove temp encrypted copy ASAP
+    try { fs.unlinkSync(tempEncryptedPath); } catch (e) {}
 
-    res.download(tempPath, file.originalName, (err) => {
-      if (err) console.error("Download error:", err);
-      fs.unlink(tempPath, () => {}); // cleanup temp file
+    // Stream the decrypted file to client (res.download handles headers)
+    res.download(tempPath, file.originalName, async (err) => {
+      if (err) console.error("Download error (res.download callback):", err);
+      // Cleanup
+      try { fs.unlinkSync(tempPath); } catch (e) {}
     });
-    await AuditLog.create({
-  user: user._id,
-  file: file._id,
-  action: "download",
-  details: `${user.name} downloaded the file "${file.originalName}"`,
-  ipAddress: req.ip,
-  userAgent: req.headers["user-agent"],
-});
 
+    // Create centralized audit (do not await to avoid delaying response)
+    createAudit(req, user._id, file._id, "download", `${user.name} downloaded the file "${file.originalName}"`);
   } catch (err) {
-  console.error("Download Error:", err);
-  res.status(500).json({ message: "Server error", error: err.message, stack: err.stack });
-}
+    console.error("Download Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message, stack: err.stack });
+  }
 });
 
 /* ============================================================
-   🔹 ROUTE 5: My Uploaded Files
+   🔹 ROUTE 5: My Uploaded Files (unchanged)
 ============================================================ */
 router.get("/my-files", authMiddleware, async (req, res) => {
   try {
@@ -329,6 +349,8 @@ router.get("/my-files", authMiddleware, async (req, res) => {
 
 /* ============================================================
    🔹 ROUTE: Delete a File
+   - deletes DB doc, cloud object should be removed (if required)
+   - creates audit entry via createAudit
 ============================================================ */
 router.delete("/delete/:id", authMiddleware, async (req, res) => {
   try {
@@ -348,30 +370,28 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Authorization: uploader or superAdmin can delete
-    const canDelete =
-      user.role === "superAdmin" || String(file.uploadedBy) === String(user._id);
+    const canDelete = user.role === "superAdmin" || String(file.uploadedBy) === String(user._id);
+    if (!canDelete) return res.status(403).json({ message: "Not authorized to delete this file." });
 
-    if (!canDelete) {
-      return res.status(403).json({ message: "Not authorized to delete this file." });
+    // Delete encrypted object from Backblaze (S3)
+    try {
+      const s3 = require("../utils/s3Client");
+      await s3
+        .deleteObject({
+          Bucket: process.env.B2_BUCKET_NAME,
+          Key: `encrypted/${file.filename}`,
+        })
+        .promise();
+    } catch (err) {
+      // Log but continue - you may prefer to treat this as fatal in production
+      console.warn("Warning: failed to delete remote object:", err.message);
     }
 
-    // Delete file from disk
-   const filePath = path.join("uploads", file.originalName);
-if (fs.existsSync(filePath)) {
-  fs.unlinkSync(filePath);
-}
-
-
-    // Remove from DB
+    // Remove DB document
     await File.findByIdAndDelete(id);
-    await AuditLog.create({
-  user: user._id,
-  file: file._id,
-  action: "delete",
-  details: `${user.name} deleted the file "${file.originalName}"`,
-  ipAddress: req.ip,
-  userAgent: req.headers["user-agent"],
-});
+
+    // Centralized audit creation
+    await createAudit(req, user._id, file._id, "delete", `${user.name} deleted the file "${file.originalName}"`);
 
     res.json({ message: "File deleted successfully." });
   } catch (err) {
@@ -380,9 +400,9 @@ if (fs.existsSync(filePath)) {
   }
 });
 
-
-
-////////////////////////
+/* ============================================================
+   🔹 Audit Logs Route (unchanged logic except centralized createAudit)
+============================================================ */
 router.get("/audit-logs", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).populate("orgId");
@@ -391,14 +411,14 @@ router.get("/audit-logs", authMiddleware, async (req, res) => {
     let logs;
 
     if (user.role === "superAdmin") {
-      // 🟢 SuperAdmin sees all logs
+      // SuperAdmin sees all logs
       logs = await AuditLog.find()
         .populate("user", "name email role")
         .populate("file", "originalName")
         .sort({ timestamp: -1 });
 
     } else if (user.role === "orgAdmin" || user.role === "deptAdmin") {
-      // 🟢 OrgAdmin / DeptAdmin see logs of users in their org (including child orgs)
+      // OrgAdmin / DeptAdmin see logs of users in their org (including child orgs)
       const orgIds = user.orgId ? await getAllOrgIds(user.orgId) : [];
       const orgUsers = await User.find({ orgId: { $in: orgIds } }).select("_id");
 
@@ -408,7 +428,7 @@ router.get("/audit-logs", authMiddleware, async (req, res) => {
         .sort({ timestamp: -1 });
 
     } else {
-      // 🟢 Normal users — see logs of all actions on files they uploaded
+      // Normal users — see logs of all actions on files they uploaded
       const myFiles = await File.find({ uploadedBy: user._id }).select("_id");
       const fileIds = myFiles.map(f => f._id);
 
