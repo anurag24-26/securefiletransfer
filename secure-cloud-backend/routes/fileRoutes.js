@@ -286,9 +286,9 @@ fs.unlinkSync(tempEncryptedPath);
       fs.unlink(tempPath, () => {}); // cleanup temp file
     });
   } catch (err) {
-    console.error("Download Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  console.error("Download Error:", err);
+  res.status(500).json({ message: "Server error", error: err.message, stack: err.stack });
+}
 });
 
 /* ============================================================

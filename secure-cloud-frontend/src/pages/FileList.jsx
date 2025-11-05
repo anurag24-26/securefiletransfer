@@ -152,23 +152,22 @@ const handleDelete = async (file) => {
     setMessage("Unable to preview this file.");
   }
 };
-
-const handleDownload = async (fileId) => {
+const handleDownload = async (fileId, fileName) => {
   try {
-    const res = await api.get(`/files/download/${fileId}`, {
+    const response = await api.get(`/files/download/${fileId}`, {
       responseType: "blob",
-      headers: { Authorization: `Bearer ${token}` },
     });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
-    const fileObj = files.find(f => f.id === fileId || f._id === fileId);
     link.href = url;
-    link.setAttribute("download", fileObj?.originalName || "file");
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-  } catch (err) {
-    setMessage("Unable to download the file.");
+    link.remove();
+  } catch (error) {
+    console.error("Download failed:", error.response?.data || error.message);
+    alert(error.response?.data?.message || "Download failed");
   }
 };
 
