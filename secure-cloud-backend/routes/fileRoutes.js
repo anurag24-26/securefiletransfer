@@ -152,7 +152,7 @@ fs.unlinkSync(encryptedPath);
 
     // Save file document
     const newFile = new File({
-      filename: `encrypted-${file.filename}`,
+      filename: file.filename,
       originalName: file.originalname,
       description: description || "",
       orgId: user.orgId ? new mongoose.Types.ObjectId(user.orgId._id) : null,
