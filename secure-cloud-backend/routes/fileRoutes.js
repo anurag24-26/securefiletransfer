@@ -129,9 +129,26 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
     }
 
     // Encrypt file
-    const encryptedPath = `uploads/encrypted-${file.filename}`;
-    const iv = await encryptFile(file.path, encryptedPath);
-    fs.unlinkSync(file.path); // remove original unencrypted file
+    // Encrypt locally first
+const encryptedPath = `uploads/encrypted-${file.filename}`;
+const iv = await encryptFile(file.path, encryptedPath);
+fs.unlinkSync(file.path); // remove original unencrypted file
+
+// Upload encrypted file to Backblaze B2
+const s3 = require("../utils/s3Client");
+const fileBuffer = fs.readFileSync(encryptedPath);
+
+await s3
+  .upload({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: `encrypted/${file.filename}`,
+    Body: fileBuffer,
+  })
+  .promise();
+
+// Remove local encrypted copy after upload
+fs.unlinkSync(encryptedPath);
+
 
     // Save file document
     const newFile = new File({
@@ -243,13 +260,26 @@ router.get("/download/:id", authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Not authorized to download this file" });
     }
 
-    const encryptedPath = path.join("uploads", file.filename);
-    if (!fs.existsSync(encryptedPath)) {
-      return res.status(404).json({ message: "Encrypted file not found" });
-    }
+   const s3 = require("../utils/s3Client");
+const tempEncryptedPath = path.join("uploads", `temp-${file.filename}`);
 
-    const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
-    await decryptFile(encryptedPath, tempPath, file.iv);
+// Download encrypted file from Backblaze
+const fileData = await s3
+  .getObject({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: `encrypted/${file.filename}`,
+  })
+  .promise();
+
+// Write encrypted data temporarily
+fs.writeFileSync(tempEncryptedPath, fileData.Body);
+
+// Decrypt to temp output
+const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
+await decryptFile(tempEncryptedPath, tempPath, file.iv);
+
+// Remove temp encrypted copy
+fs.unlinkSync(tempEncryptedPath);
 
     res.download(tempPath, file.originalName, (err) => {
       if (err) console.error("Download error:", err);
