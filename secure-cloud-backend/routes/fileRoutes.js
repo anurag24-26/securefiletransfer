@@ -174,6 +174,16 @@ fs.unlinkSync(encryptedPath);
     });
 
     await newFile.save();
+    // Create audit log
+await AuditLog.create({
+  user: user._id,
+  file: newFile._id,
+  action: "upload",
+  details: `${user.name} uploaded the file "${file.originalname}"`,
+  ipAddress: req.ip,
+  userAgent: req.headers["user-agent"],
+});
+
     res.status(201).json({ message: "File uploaded successfully", file: newFile });
   } catch (err) {
     console.error("Upload Error:", err);
@@ -286,6 +296,15 @@ fs.unlinkSync(tempEncryptedPath);
       if (err) console.error("Download error:", err);
       fs.unlink(tempPath, () => {}); // cleanup temp file
     });
+    await AuditLog.create({
+  user: user._id,
+  file: file._id,
+  action: "download",
+  details: `${user.name} downloaded the file "${file.originalName}"`,
+  ipAddress: req.ip,
+  userAgent: req.headers["user-agent"],
+});
+
   } catch (err) {
   console.error("Download Error:", err);
   res.status(500).json({ message: "Server error", error: err.message, stack: err.stack });
@@ -345,6 +364,14 @@ if (fs.existsSync(filePath)) {
 
     // Remove from DB
     await File.findByIdAndDelete(id);
+    await AuditLog.create({
+  user: user._id,
+  file: file._id,
+  action: "delete",
+  details: `${user.name} deleted the file "${file.originalName}"`,
+  ipAddress: req.ip,
+  userAgent: req.headers["user-agent"],
+});
 
     res.json({ message: "File deleted successfully." });
   } catch (err) {
@@ -354,7 +381,6 @@ if (fs.existsSync(filePath)) {
 });
 
 
-module.exports = router;
 
 ////////////////////////
 router.get("/audit-logs", authMiddleware, async (req, res) => {
@@ -365,13 +391,14 @@ router.get("/audit-logs", authMiddleware, async (req, res) => {
     let logs;
 
     if (user.role === "superAdmin") {
-      // SuperAdmin sees everything
+      // 🟢 SuperAdmin sees all logs
       logs = await AuditLog.find()
         .populate("user", "name email role")
         .populate("file", "originalName")
         .sort({ timestamp: -1 });
+
     } else if (user.role === "orgAdmin" || user.role === "deptAdmin") {
-      // Get all organization IDs including children
+      // 🟢 OrgAdmin / DeptAdmin see logs of users in their org (including child orgs)
       const orgIds = user.orgId ? await getAllOrgIds(user.orgId) : [];
       const orgUsers = await User.find({ orgId: { $in: orgIds } }).select("_id");
 
@@ -379,9 +406,13 @@ router.get("/audit-logs", authMiddleware, async (req, res) => {
         .populate("user", "name email role")
         .populate("file", "originalName")
         .sort({ timestamp: -1 });
+
     } else {
-      // Normal users - only their own logs
-      logs = await AuditLog.find({ user: user._id })
+      // 🟢 Normal users — see logs of all actions on files they uploaded
+      const myFiles = await File.find({ uploadedBy: user._id }).select("_id");
+      const fileIds = myFiles.map(f => f._id);
+
+      logs = await AuditLog.find({ file: { $in: fileIds } })
         .populate("user", "name email role")
         .populate("file", "originalName")
         .sort({ timestamp: -1 });
@@ -393,3 +424,5 @@ router.get("/audit-logs", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
+module.exports = router;
