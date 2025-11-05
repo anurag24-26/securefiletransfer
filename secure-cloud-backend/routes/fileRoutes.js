@@ -9,6 +9,7 @@ const router = express.Router();
 
 const File = require("../models/File");
 const User = require("../models/User");
+const AuditLog = require("../models/AuditLog");
 const Organization = require("../models/Organization");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
@@ -354,3 +355,41 @@ if (fs.existsSync(filePath)) {
 
 
 module.exports = router;
+
+////////////////////////
+router.get("/audit-logs", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).populate("orgId");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let logs;
+
+    if (user.role === "superAdmin") {
+      // SuperAdmin sees everything
+      logs = await AuditLog.find()
+        .populate("user", "name email role")
+        .populate("file", "originalName")
+        .sort({ timestamp: -1 });
+    } else if (user.role === "orgAdmin" || user.role === "deptAdmin") {
+      // Get all organization IDs including children
+      const orgIds = user.orgId ? await getAllOrgIds(user.orgId) : [];
+      const orgUsers = await User.find({ orgId: { $in: orgIds } }).select("_id");
+
+      logs = await AuditLog.find({ user: { $in: orgUsers } })
+        .populate("user", "name email role")
+        .populate("file", "originalName")
+        .sort({ timestamp: -1 });
+    } else {
+      // Normal users - only their own logs
+      logs = await AuditLog.find({ user: user._id })
+        .populate("user", "name email role")
+        .populate("file", "originalName")
+        .sort({ timestamp: -1 });
+    }
+
+    res.json({ count: logs.length, logs });
+  } catch (err) {
+    console.error("Audit Logs Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
