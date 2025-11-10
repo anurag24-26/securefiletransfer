@@ -78,6 +78,7 @@ router.post("/login", async (req, res) => {
 // ===================== GET CURRENT USER =====================
 router.get("/me", authMiddleware, async (req, res) => {
   try {
+    // Find user (excluding password)
     const user = await User.findById(req.user.userId)
       .select("-passwordHash")
       .populate({
@@ -85,29 +86,41 @@ router.get("/me", authMiddleware, async (req, res) => {
         select: "name type parentId",
       });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    let orgHierarchy = [];
+    // ✅ Build org hierarchy (from top-level parent → current org)
+    const orgHierarchy = [];
     let currentOrgId = user.orgId ? user.orgId._id : null;
 
     while (currentOrgId) {
-      const org = await Organization.findById(currentOrgId);
+      const org = await Organization.findById(currentOrgId).select("name type parentId");
       if (!org) break;
-      orgHierarchy.unshift({ id: org._id, name: org.name, type: org.type });
+      orgHierarchy.unshift({
+        id: org._id,
+        name: org.name,
+        type: org.type,
+      });
       currentOrgId = org.parentId;
     }
 
-    res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar, // ✅ include avatar
-        orgHierarchy,
-      },
-    });
+    // ✅ Prepare clean, structured response
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar || null, // Always include avatar field
+      org: user.orgId
+        ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
+        : null,
+      orgHierarchy, // Full chain up to top org
+    };
+
+    res.status(200).json({ success: true, user: userData });
   } catch (error) {
+    console.error("Error fetching user:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
