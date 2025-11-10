@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const path = require("path");
 const Organization = require("../models/Organization");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const upload = require("../middleware/multer"); // ✅ your multer setup
