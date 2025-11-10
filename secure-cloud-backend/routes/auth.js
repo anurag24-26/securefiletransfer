@@ -137,25 +137,21 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // ===================== UPDATE PROFILE DETAILS =====================
-router.put("/update-profile", authMiddleware, upload.single("avatar"), async (req, res) => {
+const avatarUpload = multer({ storage: multer.memoryStorage() });
+router.put("/update-profile", authMiddleware, avatarUpload.single("avatar"), async (req, res) => {
   try {
     const { name } = req.body;
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ✅ Update name if provided
     if (name) user.name = name;
 
-    // ✅ Log incoming file
-    console.log("Incoming File:", req.file);
-
-    // ✅ If new file uploaded → upload to Backblaze B2
     if (req.file) {
       const ext = path.extname(req.file.originalname);
       const filename = `${user._id}_${Date.now()}${ext}`;
       const key = `profileimage/${filename}`;
 
-      // ✅ Upload to Backblaze B2
+      // Upload to Backblaze B2 (no encryption)
       const uploadResult = await s3
         .upload({
           Bucket: process.env.B2_BUCKET_NAME,
@@ -165,9 +161,9 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
         })
         .promise();
 
-      console.log("B2 Upload Success:", uploadResult.Location || key);
+      console.log("Profile image uploaded to B2:", uploadResult.Key);
 
-      // ✅ Generate public file URL
+      // Generate accessible URL
       const fileUrl = `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`;
       user.avatar = fileUrl;
     }
