@@ -142,17 +142,14 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ✅ Update name if provided
     if (name) user.name = name;
 
-    // ✅ If new file uploaded → upload to B2 cloud
     if (req.file) {
-      // Create unique file name
       const ext = path.extname(req.file.originalname);
       const filename = `${user._id}_${Date.now()}${ext}`;
       const key = `profileimage/${filename}`;
 
-      // Upload file to B2 (S3-compatible)
+      // ✅ Upload to Backblaze B2
       await s3
         .upload({
           Bucket: process.env.B2_BUCKET_NAME,
@@ -162,10 +159,9 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
         })
         .promise();
 
-      // Generate accessible URL
-      const fileUrl = `${process.env.B2_PUBLIC_URL}/${key}`;
+      // ✅ FIX 2: Generate correct file URL
+      const fileUrl = `${process.env.B2_ENDPOINT.replace("s3.", "f002.")}/${process.env.B2_BUCKET_NAME}/${key}`;
 
-      // Save URL to DB
       user.avatar = fileUrl;
     }
 
