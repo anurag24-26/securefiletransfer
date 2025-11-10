@@ -152,8 +152,7 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // ===================== UPDATE PROFILE DETAILS =====================
-const avatarUpload = multer({ storage: multer.memoryStorage() });
-router.put("/update-profile", authMiddleware, avatarUpload.single("avatar"), async (req, res) => {
+router.put("/update-profile", authMiddleware, upload.single("avatar"), async (req, res) => {
   try {
     const { name } = req.body;
     const user = await User.findById(req.user.userId);
@@ -166,19 +165,18 @@ router.put("/update-profile", authMiddleware, avatarUpload.single("avatar"), asy
       const filename = `${user._id}_${Date.now()}${ext}`;
       const key = `profileimage/${filename}`;
 
-      // Upload to Backblaze B2 (no encryption)
-      const uploadResult = await s3
-        .upload({
-          Bucket: process.env.B2_BUCKET_NAME,
-          Key: key,
-          Body: req.file.buffer,
-          ContentType: req.file.mimetype,
-        })
-        .promise();
+      // ✅ Upload to Backblaze B2
+      const uploadResult = await s3.upload({
+        Bucket: process.env.B2_BUCKET_NAME,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype || "image/jpeg",
+        ACL: "public-read", // ✅ make file publicly viewable
+      }).promise();
 
       console.log("Profile image uploaded to B2:", uploadResult.Key);
 
-      // Generate accessible URL
+      // ✅ Construct accessible file URL
       const fileUrl = `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`;
       user.avatar = fileUrl;
     }
@@ -200,6 +198,5 @@ router.put("/update-profile", authMiddleware, avatarUpload.single("avatar"), asy
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
 
 module.exports = router;
