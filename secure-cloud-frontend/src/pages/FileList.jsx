@@ -10,6 +10,7 @@ const FilesDashboard = () => {
   const [activeTab, setActiveTab] = useState("upload");
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+const [downloadingFileId, setDownloadingFileId] = useState(null);
 
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
@@ -154,22 +155,30 @@ const handleDelete = async (file) => {
 };
 const handleDownload = async (fileId, fileName) => {
   try {
+    setDownloadingFileId(fileId); // mark downloading
+
     const response = await api.get(`/files/download/${fileId}`, {
       responseType: "blob",
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const blob = new Blob([response.data]);
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", fileName);
+    link.setAttribute("download", fileName || "file");
     document.body.appendChild(link);
     link.click();
     link.remove();
+
   } catch (error) {
     console.error("Download failed:", error.response?.data || error.message);
     alert(error.response?.data?.message || "Download failed");
+  } finally {
+    setDownloadingFileId(null); // reset after complete or error
   }
 };
+
 
   return (
     <div
@@ -414,14 +423,20 @@ const handleDownload = async (fileId, fileName) => {
                           View
                         </motion.button> */}
 
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                         onClick={() => handleDownload(file.id || file._id)}
-                          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-lg hover:from-purple-600 hover:to-pink-700 transition"
-                        >
-                          Download
-                        </motion.button>
+                       <motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  onClick={() => handleDownload(file.id || file._id, file.originalName)}
+  disabled={downloadingFileId === (file.id || file._id)}
+  className={`flex-1 py-2 rounded-xl font-semibold shadow-lg transition ${
+    downloadingFileId === (file.id || file._id)
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700"
+  }`}
+>
+  {downloadingFileId === (file.id || file._id) ? "Downloading..." : "Download"}
+</motion.button>
+
                       {((file.uploadedBy?._id === user?.id || file.uploadedBy?.id === user?.id) || user?.role === "superAdmin") && (
   <motion.button
   whileHover={{ scale: 1.05 }}
@@ -433,7 +448,6 @@ const handleDownload = async (fileId, fileName) => {
 </motion.button>
 
 )}
-
 
                       </div>
                     </motion.div>
