@@ -160,26 +160,24 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
 
     if (name) user.name = name;
 
-    if (req.file) {
-      const ext = path.extname(req.file.originalname);
-      const filename = `${user._id}_${Date.now()}${ext}`;
-      const key = `profileimage/${filename}`;
+   if (req.file) {
+  const ext = path.extname(req.file.originalname);
+  const filename = `${user._id}_${Date.now()}${ext}`;
+  const key = `profileimage/${filename}`;
 
-      // ✅ Upload to Backblaze B2
-      const uploadResult = await s3.upload({
-        Bucket: process.env.B2_BUCKET_NAME,
-        Key: key,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype || "image/jpeg",
-        ACL: "public-read", // ✅ make file publicly viewable
-      }).promise();
+  const uploadResult = await s3.upload({
+    Bucket: process.env.B2_BUCKET_NAME,
+    Key: key,
+    Body: req.file.buffer,
+    ContentType: req.file.mimetype || "image/jpeg",
+  }).promise();
 
-      console.log("Profile image uploaded to B2:", uploadResult.Key);
+  console.log("Profile image uploaded to B2:", uploadResult.Key);
 
-      // ✅ Construct accessible file URL
-      const fileUrl = `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`;
-      user.avatar = fileUrl;
-    }
+  const fileUrl = `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`;
+  user.avatar = fileUrl;
+}
+
 
     await user.save();
 
