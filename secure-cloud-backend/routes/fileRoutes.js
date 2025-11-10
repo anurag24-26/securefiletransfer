@@ -264,38 +264,33 @@ router.get("/visible-files", authMiddleware, async (req, res) => {
    - downloads encrypted object from Backblaze, decrypts to temp, streams to client
    - creates centralized audit entry for download
 ============================================================ */
+const mime = require("mime-types");
+
 router.get("/download/:id", authMiddleware, async (req, res) => {
   try {
-    // Fetch file doc
     const file = await File.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
 
-    // Fetch user (and org)
     const user = await User.findById(req.user.userId).populate("orgId");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check expiry
     if (file.expiryDate && new Date() > new Date(file.expiryDate)) {
       return res.status(403).json({ message: "File has expired." });
     }
 
-    // Build orgIds list (include user's org for normal users)
     let orgIds = user.orgId ? (await getAllOrgIds(user.orgId)).map(String) : [];
     if (user.orgId && !orgIds.includes(String(user.orgId._id))) orgIds.push(String(user.orgId._id));
 
-    // Permission check (hierarchy-aware)
     const canView =
       user.role === "superAdmin" ||
       (file.visibleToType === "User" && file.visibleTo.map(String).includes(String(user._id))) ||
       (file.visibleToType === "Organization" && file.visibleTo.map(String).some(id => orgIds.includes(String(id))));
 
     if (!canView) {
-      // helpful debug log (server-side)
       console.warn(`Unauthorized download attempt by user ${user._id} for file ${file._id}`);
       return res.status(403).json({ message: "Not authorized to download this file" });
     }
 
-    // Download encrypted file from Backblaze (S3-compatible)
     const s3 = require("../utils/s3Client");
     const tempEncryptedPath = path.join("uploads", `temp-${file.filename}`);
 
@@ -306,30 +301,36 @@ router.get("/download/:id", authMiddleware, async (req, res) => {
       })
       .promise();
 
-    // Write encrypted data temporarily
     fs.writeFileSync(tempEncryptedPath, fileData.Body);
 
-    // Decrypt to temp output path
     const tempPath = path.join("uploads", `temp-${Date.now()}-${file.originalName}`);
     await decryptFile(tempEncryptedPath, tempPath, file.iv);
 
-    // Remove temp encrypted copy ASAP
+    // Cleanup encrypted temp
     try { fs.unlinkSync(tempEncryptedPath); } catch (e) {}
 
-    // Stream the decrypted file to client (res.download handles headers)
-    res.download(tempPath, file.originalName, async (err) => {
-      if (err) console.error("Download error (res.download callback):", err);
-      // Cleanup
+    // ✅ Detect correct MIME type from file name
+    const mimeType = mime.lookup(file.originalName) || "application/octet-stream";
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
+
+    // ✅ Stream decrypted file manually for full control
+    const readStream = fs.createReadStream(tempPath);
+    readStream.pipe(res);
+
+    readStream.on("close", () => {
       try { fs.unlinkSync(tempPath); } catch (e) {}
     });
 
-    // Create centralized audit (do not await to avoid delaying response)
-    createAudit(req, user._id, file._id, "download", `${user.name} downloaded the file "${file.originalName}"`);
+    // 🧾 Log audit in background
+    createAudit(req, user._id, file._id, "download", `${user.name} downloaded "${file.originalName}"`);
+
   } catch (err) {
     console.error("Download Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message, stack: err.stack });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 /* ============================================================
    🔹 ROUTE 5: My Uploaded Files (unchanged)
