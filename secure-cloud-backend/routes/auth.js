@@ -6,7 +6,7 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const upload = require("../middleware/multer"); // ✅ your multer setup
-
+const s3=require("../utils/s3Client");
 // ===================== SIGNUP =====================
 router.post("/signup", async (req, res) => {
   try {
@@ -140,15 +140,33 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
   try {
     const { name } = req.body;
     const user = await User.findById(req.user.userId);
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // ✅ Update name if provided
     if (name) user.name = name;
 
-    // ✅ Update avatar if new file uploaded
+    // ✅ If new file uploaded → upload to B2 cloud
     if (req.file) {
-      user.avatar = `/uploads/${req.file.filename}`;
+      // Create unique file name
+      const ext = path.extname(req.file.originalname);
+      const filename = `${user._id}_${Date.now()}${ext}`;
+      const key = `profileimage/${filename}`;
+
+      // Upload file to B2 (S3-compatible)
+      await s3
+        .upload({
+          Bucket: process.env.B2_BUCKET_NAME,
+          Key: key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+        })
+        .promise();
+
+      // Generate accessible URL
+      const fileUrl = `${process.env.B2_PUBLIC_URL}/${key}`;
+
+      // Save URL to DB
+      user.avatar = fileUrl;
     }
 
     await user.save();
