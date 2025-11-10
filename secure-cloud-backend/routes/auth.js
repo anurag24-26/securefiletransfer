@@ -4,12 +4,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 const Organization = require("../models/Organization");
 const { authMiddleware } = require("../middleware/authMiddleware");
-const upload = require("../middleware/multer"); // ✅ your multer setup
-const s3=require("../utils/s3Client");
+
+const streamifier = require("streamifier");
+const cloudinary = require("../config/cloudinary");
+
+// Use multer memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 // ===================== SIGNUP =====================
 router.post("/signup", async (req, res) => {
   try {
@@ -152,6 +155,8 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // ===================== UPDATE PROFILE DETAILS =====================
+
+
 router.put("/update-profile", authMiddleware, upload.single("avatar"), async (req, res) => {
   try {
     const { name } = req.body;
@@ -160,29 +165,43 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
 
     if (name) user.name = name;
 
-   if (req.file) {
-  const ext = path.extname(req.file.originalname);
-  const filename = `${user._id}_${Date.now()}${ext}`;
-  const key = `profileimage/${filename}`;
+    if (req.file) {
+      // ✅ Upload to Cloudinary
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "profileimage",
+          public_id: `${user._id}_${Date.now()}`,
+          resource_type: "image",
+        },
+        async (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            return res.status(500).json({ message: "Upload failed", error: error.message });
+          }
 
-  const uploadResult = await s3
-  .upload({
-    Bucket: process.env.B2_BUCKET_NAME,
-    Key: key,
-    Body: req.file.buffer,
-    ContentType: req.file.mimetype,
-    ACL: "public-read", // ✅ make image publicly accessible
-  })
-  .promise();
+          console.log("✅ Uploaded to Cloudinary:", result.secure_url);
+          user.avatar = result.secure_url;
+          await user.save();
 
+          return res.json({
+            message: "Profile updated successfully!",
+            user: {
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              avatar: user.avatar,
+              role: user.role,
+            },
+          });
+        }
+      );
 
-  console.log("Profile image uploaded to B2:", uploadResult.Key);
+      // Convert file buffer to stream and upload
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+      return; // prevent multiple responses
+    }
 
-  const fileUrl = `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`;
-  user.avatar = fileUrl;
-}
-
-
+    // ✅ If no image uploaded, only update name
     await user.save();
 
     res.json({
