@@ -165,12 +165,16 @@ router.put("/update-profile", authMiddleware, upload.single("avatar"), async (re
   const filename = `${user._id}_${Date.now()}${ext}`;
   const key = `profileimage/${filename}`;
 
-  const uploadResult = await s3.upload({
+  const uploadResult = await s3
+  .upload({
     Bucket: process.env.B2_BUCKET_NAME,
     Key: key,
     Body: req.file.buffer,
-    ContentType: req.file.mimetype || "image/jpeg",
-  }).promise();
+    ContentType: req.file.mimetype,
+    ACL: "public-read", // ✅ make image publicly accessible
+  })
+  .promise();
+
 
   console.log("Profile image uploaded to B2:", uploadResult.Key);
 

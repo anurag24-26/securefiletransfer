@@ -166,19 +166,18 @@ const Home = () => {
           className="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl p-8 sm:p-12 shadow-md hover:shadow-indigo-400/30 transition-all mb-10"
         >
           <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-10">
-           {user?.avatar ? (
+
+ {user?.avatar ? (
   <img
-    src={
-      user.avatar.startsWith("http")
-        ? user.avatar
-        : `${api.defaults.baseURL.replace(/\/api$/, "")}${user.avatar}`
-    }
-    alt="Avatar"
-    className="w-32 h-32 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/40 shadow-lg"
-  />
+  src={user?.avatar}
+  alt="Avatar"
+  className="w-32 h-32 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/40 shadow-lg"
+/>
+
 ) : (
   <FaUserCircle className="text-9xl sm:text-[11rem] text-indigo-200 drop-shadow-md" />
 )}
+
 
           
 
