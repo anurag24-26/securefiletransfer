@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import Loader from "../components/Loader";
-import bgImage from "../assets/back1.jpg";
+import bgImage from "../assets/Back2.jpg";
 
 const FilesDashboard = () => {
   const { token,user } = useAuth();
