@@ -62,7 +62,7 @@ const EmptyState = ({ title, note }) => (
 const Field = ({ label, children }) => (
     <div className="relative">
         {children}
-        <label 
+        <label
             className="absolute top-0 left-3 px-1.5 py-0.5 text-xs font-medium text-slate-500 bg-white transition-all duration-200 transform -translate-y-2 pointer-events-none"
         >
             {label}

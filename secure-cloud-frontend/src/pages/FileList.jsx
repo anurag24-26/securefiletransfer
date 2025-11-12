@@ -283,7 +283,7 @@ const handleDownload = async (fileId, fileName) => {
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="">Select type</option>
                     <option value="report">Report</option>
@@ -303,7 +303,7 @@ const handleDownload = async (fileId, fileName) => {
                       setVisibleToType(e.target.value);
                       setVisibleTo("");
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="Department">Department</option>
                     <option value="Organization">Organization</option>
@@ -318,7 +318,7 @@ const handleDownload = async (fileId, fileName) => {
                   <select
                     value={visibleTo}
                     onChange={(e) => setVisibleTo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="">Select {visibleToType}</option>
                     {getVisibleOptions().map((item) => (
