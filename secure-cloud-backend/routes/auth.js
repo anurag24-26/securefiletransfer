@@ -16,9 +16,9 @@ const upload = multer({ storage });
 // ===================== SIGNUP =====================
 router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!name || !email || !password || !role)
+    if (!name || !email || !password)
       return res.status(400).json({ message: "Required fields missing" });
 
     const existingUser = await User.findOne({ email });
@@ -29,7 +29,7 @@ router.post("/signup", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const user = new User({ name, email, passwordHash, role, orgId });
+    const user = new User({ name, email, passwordHash, orgId });
     await user.save();
 
     res.status(201).json({ message: "User created successfully" });
@@ -38,6 +38,7 @@ router.post("/signup", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 
 // ===================== LOGIN =====================
 router.post("/login", async (req, res) => {
