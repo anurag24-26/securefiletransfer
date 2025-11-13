@@ -113,21 +113,37 @@ router.get("/me", authMiddleware, async (req, res) => {
     let orgTotalSize = null;
     let orgFileCount = null;
     let orgUserCount = null;
-    if (user.orgId) { // Removed role check!
-      const orgFilesStats = await File.aggregate([
-        { $match: { orgId: user.orgId._id } },
-        {
-          $group: {
-            _id: null,
-            totalSize: { $sum: "$size" },
-            fileCount: { $sum: 1 },
-          },
-        },
-      ]);
-      orgTotalSize = orgFilesStats[0]?.totalSize || 0;
-      orgFileCount = orgFilesStats[0]?.fileCount || 0;
-      orgUserCount = await User.countDocuments({ orgId: user.orgId._id });
+   if (user.orgId) {
+  // ✅ 1. Collect all org IDs in hierarchy (current + sub-orgs)
+  const orgIds = [];
+  async function collectOrgIds(parentId) {
+    orgIds.push(parentId);
+    const children = await Organization.find({ parentId }).select("_id");
+    for (const child of children) {
+      await collectOrgIds(child._id);
     }
+  }
+  await collectOrgIds(user.orgId._id);
+
+  // ✅ 2. Aggregate across all orgIds
+  const orgFilesStats = await File.aggregate([
+    { $match: { orgId: { $in: orgIds } } },
+    {
+      $group: {
+        _id: null,
+        totalSize: { $sum: "$size" },
+        fileCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  orgTotalSize = orgFilesStats[0]?.totalSize || 0;
+  orgFileCount = orgFilesStats[0]?.fileCount || 0;
+
+  // ✅ 3. Count all users (including admins) in those orgs
+  orgUserCount = await User.countDocuments({ orgId: { $in: orgIds } });
+}
+
 
     // Build org hierarchy
     const orgHierarchy = [];
