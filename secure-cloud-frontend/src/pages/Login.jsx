@@ -24,16 +24,8 @@ const AuthPage = () => {
     name: "",
     email: "",
     password: "",
-    role: "user",
   });
   const [signupError, setSignupError] = useState("");
-
-  const roles = [
-    { value: "user", label: "User" },
-    { value: "deptAdmin", label: "Department Admin" },
-    { value: "orgAdmin", label: "Organization Admin" },
-    { value: "superAdmin", label: "Super Admin" },
-  ];
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -55,7 +47,7 @@ const AuthPage = () => {
   const switchMode = () => setIsLogin(!isLogin);
 
   const handleForgotPassword = () => {
-    navigate("/forgot-password"); // Navigate to forgot password page
+    navigate("/forgot-password");
   };
 
   return (
@@ -64,7 +56,6 @@ const AuthPage = () => {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       <div className="relative flex flex-col md:flex-row bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full mx-4 border border-white/30">
-        
         {/* Left Side Image */}
         <motion.div
           key={isLogin ? "login-image" : "signup-image"}
@@ -230,20 +221,6 @@ const AuthPage = () => {
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
                     />
-
-                    <select
-                      value={signupData.role}
-                      onChange={(e) =>
-                        setSignupData({ ...signupData, role: e.target.value })
-                      }
-                      className="w-full p-3 rounded-xl bg-black text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                    >
-                      {roles.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
 
                     <motion.button
                       whileHover={{ scale: 1.03 }}
