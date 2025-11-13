@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const File = require("../models/File");
+const Organization = require("../models/Organization");
 const User = require("../models/User");
 const multer = require("multer");
 const Organization = require("../models/Organization");
@@ -80,9 +82,9 @@ router.post("/login", async (req, res) => {
 });
 
 // ===================== GET CURRENT USER =====================
+
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    // Find user (excluding password)
     const user = await User.findById(req.user.userId)
       .select("-passwordHash")
       .populate({
@@ -92,6 +94,44 @@ router.get("/me", authMiddleware, async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // ✅ Get user's total uploaded size and file count
+    const userFilesStats = await File.aggregate([
+      { $match: { uploadedBy: user._id } },
+      {
+        $group: {
+          _id: null,
+          totalSize: { $sum: "$size" },
+          fileCount: { $sum: 1 },
+        },
+      },
+    ]);
+    const userTotalSize = userFilesStats[0]?.totalSize || 0;
+    const userFileCount = userFilesStats[0]?.fileCount || 0;
+
+    // ✅ If user belongs to an organization
+    let orgTotalSize = null;
+    let orgFileCount = null;
+    let orgUserCount = null;
+
+    if (user.orgId && ["orgAdmin", "superAdmin"].includes(user.role)) {
+      // Total file size and count for org
+      const orgFilesStats = await File.aggregate([
+        { $match: { orgId: user.orgId._id } },
+        {
+          $group: {
+            _id: null,
+            totalSize: { $sum: "$size" },
+            fileCount: { $sum: 1 },
+          },
+        },
+      ]);
+      orgTotalSize = orgFilesStats[0]?.totalSize || 0;
+      orgFileCount = orgFilesStats[0]?.fileCount || 0;
+
+      // Total users in org
+      orgUserCount = await User.countDocuments({ orgId: user.orgId._id });
     }
 
     // ✅ Build org hierarchy (from top-level parent → current org)
@@ -109,18 +149,27 @@ router.get("/me", authMiddleware, async (req, res) => {
       currentOrgId = org.parentId;
     }
 
-    // ✅ Prepare clean, structured response
-    const userData = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar || null, // Always include avatar field
-      org: user.orgId
-        ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
-        : null,
-      orgHierarchy, // Full chain up to top org
-    };
+   // ✅ Prepare response
+const userData = {
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  avatar: user.avatar || null,
+  org: user.orgId
+    ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
+    : null,
+  orgHierarchy,
+  totalUploadSize: userTotalSize,
+  totalFilesUploaded: userFileCount,
+};
+
+// ✅ Include org stats only for orgAdmin or superAdmin
+if (["orgAdmin", "superAdmin"].includes(user.role)) {
+  userData.orgTotalUploadSize = orgTotalSize;
+  userData.orgTotalFiles = orgFileCount;
+  userData.orgTotalUsers = orgUserCount;
+}
 
     res.status(200).json({ success: true, user: userData });
   } catch (error) {
