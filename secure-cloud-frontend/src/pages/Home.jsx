@@ -194,6 +194,22 @@ const Home = () => {
                 <span className="font-semibold text-blue-300">Role:</span>{" "}
                 <span className="text-blue-100">{user?.role}</span>
               </p>
+<p>
+                <span className="font-semibold text-blue-300"> Total Files</span>{" "}
+                <span className="text-blue-100">{user?.orgTotalFiles}</span>
+              </p>
+              <p>
+                <span className="font-semibold text-blue-300">Upload size</span>{" "}
+                <span className="text-blue-100">{user?.orgTotalUploadSize}</span>
+              </p>
+              <p>
+                <span className="font-semibold text-blue-300">Total Upload size</span>{" "}
+                <span className="text-blue-100">{user?.totalUploadSize}</span>
+              </p>
+              <p>
+                <span className="font-semibold text-blue-300">Total users</span>{" "}
+                <span className="text-blue-100">{user?.orgTotalUsers}</span>
+              </p>
 
               {user?.orgHierarchy?.length > 0 && (
                 <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3">

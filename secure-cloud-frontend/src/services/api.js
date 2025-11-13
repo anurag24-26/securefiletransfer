@@ -1,12 +1,16 @@
 import axios from "axios";
 
+// const api = axios.create({
+//   baseURL: "http:localhost:5000/api", // backend URL
+//   timeout: 15000,
+// });
 const api = axios.create({
   baseURL: "https://securefiletransfer-0kub.onrender.com/api", // backend URL
   timeout: 15000,
 });
 
 
-//http:localhost:5000/api <-- local host address where backend is running
+// <-- local host address where backend is running
 
 
 // --- ✅ NEW: Load token from localStorage on startup
