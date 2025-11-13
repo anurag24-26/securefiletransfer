@@ -91,12 +91,11 @@ router.get("/me", authMiddleware, async (req, res) => {
         path: "orgId",
         select: "name type parentId",
       });
-
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ Get user's total uploaded size and file count
+    // User's file stats
     const userFilesStats = await File.aggregate([
       { $match: { uploadedBy: user._id } },
       {
@@ -110,13 +109,11 @@ router.get("/me", authMiddleware, async (req, res) => {
     const userTotalSize = userFilesStats[0]?.totalSize || 0;
     const userFileCount = userFilesStats[0]?.fileCount || 0;
 
-    // ✅ If user belongs to an organization
+    // Organization stats
     let orgTotalSize = null;
     let orgFileCount = null;
     let orgUserCount = null;
-
-    if (user.orgId && ["orgAdmin", "superAdmin"].includes(user.role)) {
-      // Total file size and count for org
+    if (user.orgId) { // Removed role check!
       const orgFilesStats = await File.aggregate([
         { $match: { orgId: user.orgId._id } },
         {
@@ -129,15 +126,12 @@ router.get("/me", authMiddleware, async (req, res) => {
       ]);
       orgTotalSize = orgFilesStats[0]?.totalSize || 0;
       orgFileCount = orgFilesStats[0]?.fileCount || 0;
-
-      // Total users in org
       orgUserCount = await User.countDocuments({ orgId: user.orgId._id });
     }
 
-    // ✅ Build org hierarchy (from top-level parent → current org)
+    // Build org hierarchy
     const orgHierarchy = [];
     let currentOrgId = user.orgId ? user.orgId._id : null;
-
     while (currentOrgId) {
       const org = await Organization.findById(currentOrgId).select("name type parentId");
       if (!org) break;
@@ -149,27 +143,23 @@ router.get("/me", authMiddleware, async (req, res) => {
       currentOrgId = org.parentId;
     }
 
-   // ✅ Prepare response
-const userData = {
-  id: user._id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-  avatar: user.avatar || null,
-  org: user.orgId
-    ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
-    : null,
-  orgHierarchy,
-  totalUploadSize: userTotalSize,
-  totalFilesUploaded: userFileCount,
-};
-
-// ✅ Include org stats only for orgAdmin or superAdmin
-if (["orgAdmin", "superAdmin"].includes(user.role)) {
-  userData.orgTotalUploadSize = orgTotalSize;
-  userData.orgTotalFiles = orgFileCount;
-  userData.orgTotalUsers = orgUserCount;
-}
+    // Build response
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar || null,
+      org: user.orgId
+        ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
+        : null,
+      orgHierarchy,
+      totalUploadSize: userTotalSize,
+      totalFilesUploaded: userFileCount,
+      orgTotalUploadSize: orgTotalSize,
+      orgTotalFiles: orgFileCount,
+      orgTotalUsers: orgUserCount,
+    };
 
     res.status(200).json({ success: true, user: userData });
   } catch (error) {
@@ -177,6 +167,7 @@ if (["orgAdmin", "superAdmin"].includes(user.role)) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 
 // ===================== FORGOT PASSWORD =====================
 router.post("/forgot-password", async (req, res) => {
