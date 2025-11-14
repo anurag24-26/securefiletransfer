@@ -287,7 +287,16 @@ router.get(
       const admins = await User.find({
         orgId: { $in: orgIds },
         role: { $in: ["orgAdmin", "deptAdmin"] },
-      }).select("name email role orgId");
+      })
+        .select("name email role orgId departmentId")
+        .populate({
+          path: "departmentId",
+          select: "name",
+        })
+        .populate({
+          path: "orgId",
+          select: "name",
+        });
 
       res.json({ admins });
     } catch (error) {
@@ -296,6 +305,7 @@ router.get(
     }
   }
 );
+
 /* --------------------- Remove Admin (Demote to User) --------------------- */
 router.post(
   "/admin/remove/:userId",
