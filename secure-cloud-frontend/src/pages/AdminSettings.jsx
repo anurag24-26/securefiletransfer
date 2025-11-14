@@ -183,30 +183,42 @@ const AdminSettings = () => {
         {admins.length === 0 ? (
           <p className="text-gray-500 text-center">No admins assigned.</p>
         ) : (
-          <div className="space-y-4">
-            {admins.map((a) => (
-              <div
-                key={a._id}
-                className="p-4 bg-white border rounded-xl flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-semibold text-gray-800">{a.name}</p>
-                  <p className="text-sm text-blue-600">{a.role}</p>
-                  {a.department?.name && (
-                    <p className="text-sm text-gray-500">Dept: {a.department.name}</p>
-                  )}
-                </div>
+         <div className="space-y-4">
+  {admins.map((a) => (
+    <div
+      key={a._id}
+      className="p-4 bg-white/70 backdrop-blur-sm border rounded-xl flex justify-between items-center shadow-sm hover:shadow-md transition"
+    >
+      <div>
+        <p className="font-semibold text-gray-800">{a.name}</p>
+        <p className="text-sm text-blue-600 capitalize">{a.role}</p>
 
-                <button
-                  disabled={processing === a._id}
-                  onClick={() => handleRemoveAdmin(a._id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
+        {/* Show department admin info */}
+        {a.role === "deptAdmin" && a.departmentId?.name && (
+          <p className="text-sm text-gray-500">
+            Dept: <span className="font-medium">{a.departmentId.name}</span>
+          </p>
+        )}
+
+        {/* Show org admin info */}
+        {a.role === "orgAdmin" && a.orgId?.name && (
+          <p className="text-sm text-gray-500">
+            Organization: <span className="font-medium">{a.orgId.name}</span>
+          </p>
+        )}
+      </div>
+
+      <button
+        disabled={processing === a._id}
+        onClick={() => handleRemoveAdmin(a._id)}
+        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 transition"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+</div>
+
         )}
       </motion.section>
 
