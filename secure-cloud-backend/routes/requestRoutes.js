@@ -265,4 +265,81 @@ router.get("/my-requests", authMiddleware, async (req, res) => {
   }
 });
 
+
+/* --------------------- Fetch ALL Admins Under Admin’s Organization --------------------- */
+router.get(
+  "/admins/list",
+  authMiddleware,
+  authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"),
+  async (req, res) => {
+    try {
+      const currentUser = await User.findById(req.user.userId);
+      if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+      let orgIds = [];
+
+      if (currentUser.role === "superAdmin") {
+        orgIds = (await Organization.find()).map((o) => o._id);
+      } else if (currentUser.orgId) {
+        orgIds = await getAllOrgIds(currentUser.orgId);
+      }
+
+      const admins = await User.find({
+        orgId: { $in: orgIds },
+        role: { $in: ["orgAdmin", "deptAdmin"] },
+      }).select("name email role orgId");
+
+      res.json({ admins });
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  }
+);
+/* --------------------- Remove Admin (Demote to User) --------------------- */
+router.post(
+  "/admin/remove/:userId",
+  authMiddleware,
+  authorizeRoles("superAdmin", "orgAdmin"),
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUser = await User.findById(req.user.userId);
+
+      if (!currentUser) return res.status(404).json({ message: "Current user not found" });
+
+      // Fetch the target admin
+      const target = await User.findById(userId);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+
+      // Only admins can be removed
+      if (!["orgAdmin", "deptAdmin"].includes(target.role)) {
+        return res.status(400).json({ message: "User is not an admin" });
+      }
+
+      // Permission rules
+      if (currentUser.role === "orgAdmin") {
+        // orgAdmin can remove admins ONLY under their org tree
+        let orgIds = await getAllOrgIds(currentUser.orgId);
+        orgIds = orgIds.map((id) => id.toString());
+
+        if (!orgIds.includes(target.orgId.toString())) {
+          return res
+            .status(403)
+            .json({ message: "Forbidden: You cannot remove admins outside your organization" });
+        }
+      }
+
+      // Demote admin to normal user
+      target.role = "user";
+      await target.save();
+
+      res.json({ message: "Admin removed successfully", user: target });
+    } catch (error) {
+      console.error("Remove admin error:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  }
+);
+
 module.exports = router;
