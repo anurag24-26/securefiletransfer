@@ -1,4 +1,3 @@
-// Home.jsx — Ultra-Modern Glassmorphic Dashboard (Dark Blue Info + Purple Edit Box)
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
@@ -34,7 +33,9 @@ const Home = () => {
         });
         setUser(userData.user);
 
-        if (["superAdmin", "orgAdmin", "deptAdmin"].includes(userData.user.role)) {
+        if (
+          ["superAdmin", "orgAdmin", "deptAdmin"].includes(userData.user.role)
+        ) {
           const { data: adminReqData } = await api.get("/requests", {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -100,8 +101,7 @@ const Home = () => {
   };
 
   if (loading) return <Loader />;
-
-  if (error) {
+  if (error)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white px-4">
         <p className="text-red-400 text-lg mb-4">{error}</p>
@@ -113,40 +113,39 @@ const Home = () => {
         </button>
       </div>
     );
-  }
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-14 px-3 sm:px-6 relative overflow-auto"
+      className="min-h-screen flex items-center justify-center py-10 px-2 sm:px-4 bg-fixed relative"
       style={{
         backgroundImage: `url(${bgImage})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundAttachment: "fixed",
       }}
     >
-      {/* Subtle overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/55 via-slate-900/40 to-black/50 backdrop-blur-[2px]" />
-
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/55 via-slate-900/40 to-black/50 backdrop-blur-[2px] z-0" />
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 w-full max-w-6xl rounded-[2.5rem] bg-white/5 backdrop-blur-xl border border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.4)] p-8 sm:p-14"
+        transition={{ duration: 0.7 }}
+        className="relative z-10 w-full max-w-4xl rounded-2xl bg-white/5 border border-white/10 shadow-xl p-4 sm:p-8 mx-auto"
       >
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-10 text-center sm:text-left">
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-white drop-shadow-[0_3px_8px_rgba(0,0,0,0.6)]">
-            Welcome, {user?.name ?? "User"}{" "}
-            <span className="inline-block animate-wave text-[2.5rem] sm:text-[3rem]">
-              👋🏽
-            </span>
-          </h1>
+        <header className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-2xl sm:text-4xl font-bold text-white">
+              Welcome, {user?.name ?? "User"}
+              <span className="ml-2 text-xl sm:text-2xl">👋</span>
+            </h1>
+            <p className="mt-1 text-sm text-blue-200/80">
+              Here’s a summary of your organization and storage.
+            </p>
+          </div>
           <motion.button
-            whileHover={{ scale: 1.07 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsEditing(!isEditing)}
-            className="mt-5 sm:mt-0 flex items-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-600 to-blue-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:shadow-purple-400/40 transition-all text-base sm:text-lg"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setIsEditing((prev) => !prev)}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white px-4 py-2 rounded-full shadow text-sm"
           >
             {isEditing ? (
               <>
@@ -158,203 +157,305 @@ const Home = () => {
               </>
             )}
           </motion.button>
-        </div>
-
-        {/* Profile Box */}
-        <motion.div
-          whileHover={{ scale: 1.01 }}
-          className="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl p-8 sm:p-12 shadow-md hover:shadow-indigo-400/30 transition-all mb-10"
-        >
-          <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-10">
-
- {user?.avatar ? (
-  <img
-  src={user?.avatar}
-  alt="Avatar"
-  className="w-32 h-32 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white/40 shadow-lg"
-/>
-
-) : (
-  <FaUserCircle className="text-9xl sm:text-[11rem] text-indigo-200 drop-shadow-md" />
-)}
-
-
-          
-
-            <div className="text-white text-lg sm:text-xl space-y-3 sm:space-y-4 text-center sm:text-left leading-relaxed">
-              <p>
-                <span className="font-semibold text-blue-300">Name:</span>{" "}
-                <span className="text-blue-100">{user?.name}</span>
-              </p>
-              <p>
-                <span className="font-semibold text-blue-300">Email:</span>{" "}
-                <span className="text-blue-100">{user?.email}</span>
-              </p>
-              <p>
-                <span className="font-semibold text-blue-300">Role:</span>{" "}
-                <span className="text-blue-100">{user?.role}</span>
-              </p>
-<p>
-                <span className="font-semibold text-blue-300"> Total Files</span>{" "}
-                <span className="text-blue-100">{user?.orgTotalFiles}</span>
-              </p>
-              <p>
-                <span className="font-semibold text-blue-300">Upload size</span>{" "}
-                <span className="text-blue-100">{user?.orgTotalUploadSize}</span>
-              </p>
-              <p>
-                <span className="font-semibold text-blue-300">Total Upload size</span>{" "}
-                <span className="text-blue-100">{user?.totalUploadSize}</span>
-              </p>
-              <p>
-                <span className="font-semibold text-blue-300">Total users</span>{" "}
-                <span className="text-blue-100">{user?.orgTotalUsers}</span>
-              </p>
-
-              {user?.orgHierarchy?.length > 0 && (
-                <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-3">
-                  <span className="font-semibold text-blue-300">Organization:</span>
+        </header>
+        {/* Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+          {/* Profile Card */}
+          <motion.section
+            whileHover={{ scale: 1.01 }}
+            className="rounded-xl bg-white/10 border border-white/10 shadow-md p-5 flex flex-col items-center md:items-start"
+          >
+            <div className="flex items-center gap-4 mb-3">
+              {user?.avatar ? (
+                <img
+                  src={user?.avatar}
+                  alt="avatar"
+                  className="w-20 h-20 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-white/20"
+                />
+              ) : (
+                <FaUserCircle className="text-indigo-200 text-6xl sm:text-7xl" />
+              )}
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-lg font-semibold text-white">{user?.name}</h2>
+                <p className="text-xs text-blue-200">{user?.email}</p>
+                <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+                  <span className="px-3 py-1 bg-indigo-700/50 text-white text-xs rounded-full border border-white/10">
+                    {user?.role ?? "—"}
+                  </span>
+                  {user?.org?.name && (
+                    <span className="px-3 py-1 bg-blue-600/40 text-white text-xs rounded-full border border-white/10">
+                      {user?.org.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="w-full grid grid-cols-2 gap-2">
+              <div className="bg-white/10 p-2 rounded-lg text-center">
+                <div className="text-xs text-blue-200">Users</div>
+                <div className="text-white font-medium">
+                  {user?.orgTotalUsers ?? 0}
+                </div>
+              </div>
+              <div className="bg-white/10 p-2 rounded-lg text-center">
+                <div className="text-xs text-blue-200">Files</div>
+                <div className="text-white font-medium">
+                  {user?.orgTotalFiles ?? 0}
+                </div>
+              </div>
+            </div>
+          </motion.section>
+          {/* Storage Card */}
+          <motion.section
+            whileHover={{ scale: 1.01 }}
+            className="md:col-span-2 rounded-xl bg-gradient-to-br from-blue-900/30 to-indigo-900/20 border border-white/10 shadow-md p-5 flex flex-col justify-between"
+          >
+            <h2 className="text-lg font-semibold text-white mb-2">
+              Organization Storage
+            </h2>
+            <div className="flex flex-wrap justify-between gap-2 items-center mb-3">
+              <div className="text-sm text-blue-200">Limit</div>
+              <div className="font-medium text-white">
+                {user?.orgStorageLimit
+                  ? formatBytes(user.orgStorageLimit)
+                  : "5 GB"}
+              </div>
+            </div>
+            {/* Progress Bar */}
+            <div className="w-full bg-white/10 rounded-full h-3 mb-4 relative">
+              <div
+                className="h-3 rounded-full bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 transition-all duration-700"
+                style={{
+                  width: `${
+                    user?.orgStorageLimit
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            ((user?.orgUsedStorage || 0) /
+                              user.orgStorageLimit) *
+                              100
+                          )
+                        )
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap justify-between items-center gap-2 text-xs text-blue-200 mb-2">
+              <div>
+                <span>Used</span>
+                <div className="font-medium text-white">
+                  {formatBytes(user?.orgUsedStorage || 0)}
+                </div>
+              </div>
+              <div>
+                <span>Remaining</span>
+                <div className="font-medium text-white">
+                  {user?.orgStorageLimit
+                    ? formatBytes(
+                        Math.max(
+                          0,
+                          (user?.orgStorageLimit || 0) -
+                            (user?.orgUsedStorage || 0)
+                        )
+                      )
+                    : "—"}
+                </div>
+              </div>
+              <div>
+                <span>Usage</span>
+                <div className="font-medium text-white">
+                  {user?.orgStorageLimit
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          ((user?.orgUsedStorage || 0) /
+                            user.orgStorageLimit) *
+                            100
+                        )
+                      )
+                    : 0}
+                  %
+                </div>
+              </div>
+            </div>
+            {/* Extra stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="bg-white/10 p-2 rounded-lg text-center">
+                <div className="text-xs text-blue-200">Total Files</div>
+                <div className="text-white font-medium">
+                  {user?.orgTotalFiles ?? 0}
+                </div>
+              </div>
+              <div className="bg-white/10 p-2 rounded-lg text-center">
+                <div className="text-xs text-blue-200">Your Upload Size</div>
+                <div className="text-white font-medium">
+                  {formatBytes(user?.totalUploadSize || 0)}
+                </div>
+              </div>
+              <div className="bg-white/10 p-2 rounded-lg text-center">
+                <div className="text-xs text-blue-200">Last Updated</div>
+                <div className="text-white font-medium">
+                  {user?.lastUploadAt
+                    ? new Date(user.lastUploadAt).toLocaleString()
+                    : "—"}
+                </div>
+              </div>
+            </div>
+            {/* Organization Hierarchy */}
+            {user?.orgHierarchy?.length > 0 && (
+              <div className="mt-3">
+                <span className="text-xs text-blue-200">
+                  Organization Path
+                </span>
+                <div className="flex flex-wrap gap-2 mt-2">
                   {user.orgHierarchy.map((o, i) => (
                     <span
-                      key={o._id || i}
-                      className="px-4 py-1.5 bg-gradient-to-r from-blue-900/60 to-indigo-800/60 border border-white/20 rounded-full text-sm sm:text-base text-white shadow-inner hover:bg-indigo-700/40 transition-all"
+                      key={i}
+                      className="px-3 py-1 bg-white/10 border border-white/6 rounded-full text-xs text-white"
                     >
                       {o.name}
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
+              </div>
+            )}
+          </motion.section>
+        </div>
         {/* Edit Profile Form */}
         {isEditing && (
           <motion.form
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.32 }}
             onSubmit={handleProfileUpdate}
-            className="bg-gradient-to-br from-purple-900/60 via-indigo-900/50 to-blue-900/60 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 border border-white/20 shadow-xl space-y-6 mb-12"
+            className="mb-8 w-full bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-white/10 rounded-xl p-6 shadow-lg"
           >
-            <h2 className="text-2xl sm:text-3xl font-semibold text-white flex items-center gap-2">
-              <FaEdit /> Edit Profile
-            </h2>
-
-            <div>
-              <label className="block text-blue-200 mb-2 font-medium text-lg">
-                Name
-              </label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Enter new name"
-                className="w-full px-5 py-4 bg-white/15 border border-white/25 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-lg"
-              />
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-3">
+              Edit Profile
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+              <div>
+                <label className="block text-xs text-blue-200 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Enter new name"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-md text-white placeholder-blue-200 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-blue-200 mb-1">
+                  Avatar
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="w-full px-2 py-2 bg-white/10 border border-white/10 rounded-md text-white file:bg-indigo-700 file:text-white file:rounded-md"
+                />
+                {selectedFile && (
+                  <p className="mt-1 text-xs text-indigo-200">
+                    {selectedFile.name}
+                  </p>
+                )}
+              </div>
             </div>
-
-            <div>
-              <label className="block text-blue-200 mb-2 font-medium text-lg">
-                Avatar
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSelectedFile(e.target.files[0])}
-                className="w-full bg-white/15 border border-white/25 rounded-lg p-4 text-white file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-700 file:text-white hover:file:bg-indigo-800 transition"
-              />
-              {selectedFile && (
-                <p className="mt-2 text-sm text-indigo-300">{selectedFile.name}</p>
-              )}
-            </div>
-
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={updating}
-              className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-semibold py-4 rounded-full shadow-lg hover:shadow-indigo-400/40 transition-all text-lg"
+              className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-full font-semibold shadow mt-2"
             >
               {updating ? "Updating..." : "Save Changes"}
             </motion.button>
           </motion.form>
         )}
-
         {/* Requests */}
-        {["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role) &&
-          adminRequests.length > 0 && (
+        <div className="mt-4 mb-2 space-y-4">
+          {["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role) &&
+            adminRequests.length > 0 && (
+              <RequestSection
+                title="Pending Admin Requests"
+                color="indigo"
+                requests={adminRequests}
+                respondToRequest={respondToRequest}
+              />
+            )}
+          {myRequests.length > 0 && (
             <RequestSection
-              title="Pending Admin Requests"
-              color="indigo"
-              requests={adminRequests}
+              title="My Pending Requests"
+              color="teal"
+              requests={myRequests}
               respondToRequest={respondToRequest}
             />
           )}
-
-        {myRequests.length > 0 && (
-          <RequestSection
-            title="My Pending Requests"
-            color="teal"
-            requests={myRequests}
-            respondToRequest={respondToRequest}
-          />
-        )}
+        </div>
       </motion.div>
     </div>
   );
+
+  function formatBytes(bytes = 0) {
+    if (!bytes || bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
 };
 
-// Request Section
 const RequestSection = ({ title, color, requests, respondToRequest }) => {
   const accent =
     color === "indigo"
       ? "from-indigo-200 to-blue-200"
       : "from-teal-200 to-emerald-200";
-
   return (
     <motion.section
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7 }}
-      className="mt-10"
+      transition={{ duration: 0.4 }}
+      className="w-full"
     >
       <h2
-        className={`text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${accent} mb-6`}
+        className={`text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${accent} mb-3`}
       >
         {title}
       </h2>
-      <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-3">
         {requests.map((r) => (
           <motion.div
             key={r._id}
-            whileHover={{ scale: 1.02 }}
-            className="p-6 sm:p-8 bg-white/10 border border-white/20 rounded-3xl shadow-md hover:shadow-indigo-400/30 transition-all backdrop-blur-2xl flex flex-col sm:flex-row justify-between gap-5"
+            whileHover={{ scale: 1.01 }}
+            className="p-4 bg-white/10 border border-white/10 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between gap-2 items-center"
           >
-            <div className="text-white text-base sm:text-lg flex-1 leading-relaxed">
-              <p>
-                <strong className="text-indigo-200">{r.sender?.name}</strong> sent a{" "}
-                <span className="capitalize text-indigo-200">{r.type}</span> request for{" "}
-                <strong className="text-indigo-200">
+            <div className="flex-1 flex flex-col text-white">
+              <span className="font-semibold text-indigo-200">
+                {r.sender?.name}
+              </span>
+              <span className="text-xs mt-1 text-blue-200">
+                <span className="capitalize">{r.type}</span> request for{" "}
+                <span className="font-medium text-white">
                   {r.orgId?.name || r.departmentId?.name}
-                </strong>
-              </p>
+                </span>
+              </span>
               {r.message && (
-                <p className="italic text-sm sm:text-base text-gray-200 mt-2">
+                <span className="mt-2 text-xs italic text-gray-200">
                   {r.message}
-                </p>
+                </span>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex gap-2 mt-2 sm:mt-0">
               <button
                 onClick={() => respondToRequest(r._id, "approve")}
-                className="bg-gradient-to-r from-teal-500 to-indigo-500 hover:from-indigo-500 hover:to-teal-500 text-white px-6 py-3 rounded-xl shadow-md transition-all text-base"
+                className="px-4 py-1 sm:py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg shadow text-xs sm:text-sm"
               >
                 Accept
               </button>
               <button
                 onClick={() => respondToRequest(r._id, "reject")}
-                className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl shadow-md transition-all text-base"
+                className="px-4 py-1 sm:py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow text-xs sm:text-sm"
               >
                 Reject
               </button>
