@@ -82,99 +82,101 @@ router.post("/login", async (req, res) => {
 });
 
 // ===================== GET CURRENT USER =====================
-
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId)
       .select("-passwordHash")
       .populate({
         path: "orgId",
-        select: "name type parentId",
+        select: "name type parentId usedStorage storageLimit",
       });
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // User's file stats
-    const userFilesStats = await File.aggregate([
-      { $match: { uploadedBy: user._id } },
-      {
-        $group: {
-          _id: null,
-          totalSize: { $sum: "$size" },
-          fileCount: { $sum: 1 },
-        },
-      },
-    ]);
-    const userTotalSize = userFilesStats[0]?.totalSize || 0;
-    const userFileCount = userFilesStats[0]?.fileCount || 0;
-
-    // Organization stats
-    let orgTotalSize = null;
-    let orgFileCount = null;
+    // ============================
+    //  ORG USER COUNT (ALL CHILDS)
+    // ============================
     let orgUserCount = null;
-   if (user.orgId) {
-  // ✅ 1. Collect all org IDs in hierarchy (current + sub-orgs)
-  const orgIds = [];
-  async function collectOrgIds(parentId) {
-    orgIds.push(parentId);
-    const children = await Organization.find({ parentId }).select("_id");
-    for (const child of children) {
-      await collectOrgIds(child._id);
+
+    if (user.orgId) {
+      // 1. Collect all org IDs in the hierarchy
+      const orgIds = [];
+
+      async function collectOrgIds(parentId) {
+        orgIds.push(parentId);
+        const children = await Organization.find({ parentId }).select("_id");
+        for (const child of children) {
+          await collectOrgIds(child._id);
+        }
+      }
+
+      await collectOrgIds(user.orgId._id);
+
+      // 2. Count users in all those orgs
+      orgUserCount = await User.countDocuments({ orgId: { $in: orgIds } });
     }
-  }
-  await collectOrgIds(user.orgId._id);
 
-  // ✅ 2. Aggregate across all orgIds
-  const orgFilesStats = await File.aggregate([
-    { $match: { orgId: { $in: orgIds } } },
-    {
-      $group: {
-        _id: null,
-        totalSize: { $sum: "$size" },
-        fileCount: { $sum: 1 },
-      },
-    },
-  ]);
+    // ============================
+    //  ORG STORAGE VALUES
+    // ============================
+    let orgUsedStorage = null;
+    let orgStorageLimit = null;
+    let orgRemainingStorage = null;
 
-  orgTotalSize = orgFilesStats[0]?.totalSize || 0;
-  orgFileCount = orgFilesStats[0]?.fileCount || 0;
+    if (user.orgId) {
+      orgUsedStorage = user.orgId.usedStorage || 0;
+      orgStorageLimit = user.orgId.storageLimit || 0;
+      orgRemainingStorage = orgStorageLimit - orgUsedStorage;
+    }
 
-  // ✅ 3. Count all users (including admins) in those orgs
-  orgUserCount = await User.countDocuments({ orgId: { $in: orgIds } });
-}
-
-
-    // Build org hierarchy
+    // ============================
+    //  BUILD ORG HIERARCHY
+    // ============================
     const orgHierarchy = [];
     let currentOrgId = user.orgId ? user.orgId._id : null;
+
     while (currentOrgId) {
-      const org = await Organization.findById(currentOrgId).select("name type parentId");
+      const org = await Organization.findById(currentOrgId).select(
+        "name type parentId"
+      );
       if (!org) break;
+
       orgHierarchy.unshift({
         id: org._id,
         name: org.name,
         type: org.type,
       });
+
       currentOrgId = org.parentId;
     }
 
-    // Build response
+    // ============================
+    //  RESPONSE
+    // ============================
     const userData = {
       id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       avatar: user.avatar || null,
+
       org: user.orgId
-        ? { id: user.orgId._id, name: user.orgId.name, type: user.orgId.type }
+        ? {
+            id: user.orgId._id,
+            name: user.orgId.name,
+            type: user.orgId.type,
+          }
         : null,
+
       orgHierarchy,
-      totalUploadSize: userTotalSize,
-      totalFilesUploaded: userFileCount,
-      orgTotalUploadSize: orgTotalSize,
-      orgTotalFiles: orgFileCount,
       orgTotalUsers: orgUserCount,
+
+      // NEW STORAGE FIELDS
+      orgUsedStorage,
+      orgStorageLimit,
+      orgRemainingStorage,
     };
 
     res.status(200).json({ success: true, user: userData });
@@ -183,7 +185,6 @@ router.get("/me", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
 
 // ===================== FORGOT PASSWORD =====================
 router.post("/forgot-password", async (req, res) => {

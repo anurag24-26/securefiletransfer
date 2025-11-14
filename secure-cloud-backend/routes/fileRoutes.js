@@ -145,7 +145,23 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
     const user = await User.findById(req.user.userId).populate("orgId");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Convert visibleTo to array of ObjectIds
+    // ⭐ ADDED — Check storage limit before upload
+    if (user.orgId) {
+      const fileSize = file.size; // in bytes
+      const used = user.orgId.usedStorage || 0;
+      const limit = user.orgId.storageLimit || 0;
+
+      if (used + fileSize > limit) {
+        return res.status(400).json({
+          message: "Storage limit exceeded",
+          usedStorage: used,
+          storageLimit: limit,
+          required: fileSize
+        });
+      }
+    }
+    // ⭐ END
+
     let visibilityTargets = [];
     if (visibleTo) {
       const idsArray = Array.isArray(visibleTo) ? visibleTo : visibleTo.split(",");
@@ -154,28 +170,22 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
       visibilityTargets = [new mongoose.Types.ObjectId(user._id)];
     }
 
-    // Encrypt file locally
+    // Encrypt, upload, remove local etc...
     const encryptedPath = `uploads/encrypted-${file.filename}`;
     const iv = await encryptFile(file.path, encryptedPath);
-    // remove original unencrypted file
     try { fs.unlinkSync(file.path); } catch (e) {}
 
-    // Upload encrypted file to Backblaze B2 (S3-compatible)
     const s3 = require("../utils/s3Client");
     const fileBuffer = fs.readFileSync(encryptedPath);
 
-    await s3
-      .upload({
-        Bucket: process.env.B2_BUCKET_NAME,
-        Key: `encrypted/${file.filename}`,
-        Body: fileBuffer,
-      })
-      .promise();
+    await s3.upload({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: `encrypted/${file.filename}`,
+      Body: fileBuffer,
+    }).promise();
 
-    // Remove local encrypted copy after upload
     try { fs.unlinkSync(encryptedPath); } catch (e) {}
 
-    // Save file document
     const newFile = new File({
       filename: file.filename,
       originalName: file.originalname,
@@ -199,15 +209,27 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
 
     await newFile.save();
 
-    // centralized audit
-    await createAudit(req, user._id, newFile._id, "upload", `${user.name} uploaded the file "${file.originalname}"`);
+    // ⭐ ADDED — Increase used storage
+    if (user.orgId) {
+      await Organization.findByIdAndUpdate(
+        user.orgId._id,
+        { $inc: { usedStorage: file.size } }
+      );
+    }
+    // ⭐ END
+
+    // Central audit
+    await createAudit(req, user._id, newFile._id, "upload",
+      `${user.name} uploaded the file "${file.originalname}"`);
 
     res.status(201).json({ message: "File uploaded successfully", file: newFile });
+
   } catch (err) {
     console.error("Upload Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 /* ============================================================
    🔹 ROUTE 3: Visible Files for User

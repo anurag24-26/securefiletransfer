@@ -33,6 +33,14 @@ const organizationSchema = new mongoose.Schema(
       index: true, // keep it indexed for searching
       default: null,
     },
+    usedStorage: {
+  type: Number,
+  default: 0 // in bytes
+},
+storageLimit: {
+  type: Number,
+  default: 5 * 1024 * 1024 * 1024 // 5GB default
+},
     admins: [
       {
         type: mongoose.Schema.Types.ObjectId,
