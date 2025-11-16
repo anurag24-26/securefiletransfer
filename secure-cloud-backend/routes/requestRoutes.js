@@ -273,59 +273,30 @@ router.get(
   authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"),
   async (req, res) => {
     try {
-      const currentUser = await User.findById(req.user.userId)
-        .select("role orgId departmentId");
-
-      if (!currentUser) {
+      const currentUser = await User.findById(req.user.userId);
+      if (!currentUser)
         return res.status(404).json({ message: "User not found" });
-      }
 
-      let allowedOrgIds = [];
+      let orgIds = [];
 
-      // SUPER ADMIN → can access ALL organizations
       if (currentUser.role === "superAdmin") {
-        allowedOrgIds = (await Organization.find()).map((o) => o._id);
+        orgIds = (await Organization.find()).map((o) => o._id);
+      } else if (currentUser.orgId) {
+        orgIds = await getAllOrgIds(currentUser.orgId);
       }
 
-      // ORG ADMIN → can access their org + sub orgs
-      else if (currentUser.role === "orgAdmin") {
-        if (!currentUser.orgId) {
-          return res.status(400).json({ message: "Org admin has no orgId assigned" });
-        }
-        allowedOrgIds = await getAllOrgIds(currentUser.orgId);
-      }
-
-      // DEPT ADMIN → can access only their department's org
-      else if (currentUser.role === "deptAdmin") {
-        if (!currentUser.departmentId) {
-          return res.status(400).json({ message: "Department admin has no department assigned" });
-        }
-
-        const department = await Department.findById(currentUser.departmentId);
-        if (!department) {
-          return res.status(404).json({ message: "Department not found" });
-        }
-
-        allowedOrgIds = await getAllOrgIds(department.orgId);
-      }
-
-      // === FETCH ADMINS ===
       const admins = await User.find({
+        orgId: { $in: orgIds },
         role: { $in: ["orgAdmin", "deptAdmin"] },
-        orgId: { $in: allowedOrgIds },
       })
-        .select("name email role orgId departmentId")
+        .select("name email role orgId")
         .populate("orgId", "name type")
-        .populate("departmentId", "name")
         .lean();
 
       res.json({ admins });
     } catch (error) {
       console.error("Error fetching admins:", error);
-      res.status(500).json({
-        message: "Server error fetching admins",
-        error: error.message,
-      });
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   }
 );
