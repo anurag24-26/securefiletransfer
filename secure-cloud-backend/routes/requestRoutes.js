@@ -285,18 +285,17 @@ router.get(
       }
 
       const admins = await User.find({
-        orgId: { $in: orgIds },
-        role: { $in: ["orgAdmin", "deptAdmin"] },
-      })
-        .select("name email role orgId departmentId")
-        .populate({
-          path: "departmentId",
-          select: "name",
-        })
-        .populate({
-          path: "orgId",
-          select: "name",
-        });
+  role: { $in: ["orgAdmin", "deptAdmin"] },
+  $or: [
+    { orgId: { $in: orgIds } },
+    { departmentId: { $in: orgIds } }
+  ]
+})
+  .select("name email role orgId departmentId")
+  .populate("orgId", "name")
+  .populate("departmentId", "name")
+  .lean();
+
 
       res.json({ admins });
     } catch (error) {
