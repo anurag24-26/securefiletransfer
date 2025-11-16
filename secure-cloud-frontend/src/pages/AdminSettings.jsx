@@ -99,25 +99,26 @@ const AdminSettings = () => {
   };
 
   const handleRemoveAdmin = async (adminId) => {
-    if (!window.confirm("Remove this admin?")) return;
+  if (!window.confirm("Remove this admin?")) return;
 
-    setProcessing(adminId);
+  setProcessing(adminId);
 
-    try {
-      await api.post(
-        `requests/admins/remove`,
-        { adminId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    await api.post(
+      `requests/admin/remove/${adminId}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      setAdmins((prev) => prev.filter((a) => a._id !== adminId));
-      alert("Admin removed");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to remove admin");
-    }
+    setAdmins((prev) => prev.filter((a) => a._id !== adminId));
+    alert("Admin removed");
+  } catch (err) {
+    alert(err.response?.data?.message || "Failed to remove admin");
+  }
 
-    setProcessing(null);
-  };
+  setProcessing(null);
+};
+
 
   if (loading) return <Loader />;
 
