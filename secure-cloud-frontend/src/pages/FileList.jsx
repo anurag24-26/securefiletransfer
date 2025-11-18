@@ -8,22 +8,20 @@ import Loader from "../components/Loader";
 import { FiUpload, FiTrash2, FiDownload } from "react-icons/fi";
 import { HiOutlineDocumentSearch } from "react-icons/hi";
 
-import "./FilesDashboard.css"; // <- new CSS for blobs/animations
+import "./FilesDashboard.css"; // <- new premium CSS
 
-// background image
 import bgImage from "../assets/Back2.jpg";
 
-/* Small utility components inside the same file for clarity */
 const FileTypePill = ({ type }) => {
   const map = {
-    report: { label: "Report", emoji: "📊", cls: "bg-blue-100 text-blue-800" },
-    document: { label: "Document", emoji: "📄", cls: "bg-cyan-100 text-cyan-800" },
-    presentation: { label: "Presentation", emoji: "🎤", cls: "bg-indigo-100 text-indigo-800" },
-    other: { label: "Other", emoji: "📦", cls: "bg-gray-100 text-gray-800" },
+    report: { label: "Report", emoji: "📊" },
+    document: { label: "Document", emoji: "📄" },
+    presentation: { label: "Presentation", emoji: "🎤" },
+    other: { label: "Other", emoji: "📦" },
   };
   const info = map[type] || map.other;
   return (
-    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${info.cls}`}>
+    <span className="pill-glass inline-flex items-center gap-2 text-xs font-semibold">
       <span>{info.emoji}</span>
       <span>{info.label}</span>
     </span>
@@ -31,7 +29,7 @@ const FileTypePill = ({ type }) => {
 };
 
 const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+  <div className="empty-state flex flex-col items-center justify-center py-12 px-6 text-center">
     <svg width="160" height="120" viewBox="0 0 160 120" fill="none" className="mb-4">
       <rect x="6" y="18" width="148" height="84" rx="10" fill="#ffffff20" />
       <rect x="22" y="34" width="60" height="12" rx="4" fill="#ffffff18" />
@@ -39,7 +37,6 @@ const EmptyState = () => (
       <rect x="22" y="68" width="80" height="10" rx="4" fill="#ffffff18" />
       <circle cx="124" cy="40" r="14" fill="#ffffff18" />
     </svg>
-
     <h3 className="text-lg font-semibold text-white">📁 No files yet</h3>
     <p className="text-sm text-white/80 max-w-xs mt-2">
       Upload your first secure file to get started. Files will appear here for your team.
@@ -55,21 +52,18 @@ const FilesDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [downloadingFileId, setDownloadingFileId] = useState(null);
 
-  // upload fields
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
   const [visibleTo, setVisibleTo] = useState("");
   const [visibleToType, setVisibleToType] = useState("Department");
 
-  // visibility targets
   const [departments, setDepartments] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
 
   const [message, setMessage] = useState("");
 
-  // fetch targets on mount
   useEffect(() => {
     if (!token) return;
     const fetchTargets = async () => {
@@ -88,7 +82,6 @@ const FilesDashboard = () => {
     fetchTargets();
   }, [token]);
 
-  // fetch files when visible tab active
   useEffect(() => {
     if (activeTab !== "visible" || !token) return;
     (async () => {
@@ -137,7 +130,6 @@ const FilesDashboard = () => {
       setType("");
       setVisibleTo("");
 
-      // refresh if we're on visible tab
       if (activeTab === "visible") {
         const r = await api.get("/files/visible-files", { headers: { Authorization: `Bearer ${token}` } });
         setFiles(r.data.files || []);
@@ -199,7 +191,6 @@ const FilesDashboard = () => {
     }
   };
 
-  // variants for framer-motion
   const container = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.03 } } };
   const card = { hidden: { opacity: 0, y: 10, scale: 0.98 }, visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3 } } };
 
@@ -210,15 +201,11 @@ const FilesDashboard = () => {
       className="min-h-screen relative"
       style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
     >
-      {/* overlay */}
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm pointer-events-none" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-none" />
 
-      {/* particles / blobs */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-28 -top-24 w-96 h-96 rounded-full bg-gradient-to-tr from-[#3b82f6]/30 to-[#06b6d4]/18 blur-3xl animate-blob slow" />
-        <div className="absolute right-4 top-10 w-72 h-72 rounded-full bg-gradient-to-tr from-[#06b6d4]/18 to-[#3b82f6]/12 blur-2xl animate-blob delay-2 slow" />
-        <div className="absolute left-8 bottom-10 w-1 h-1 rounded-full bg-[#3b82f6]/40 animate-pulseSlow" />
-        <div className="absolute right-20 bottom-20 w-1.5 h-1.5 rounded-full bg-[#06b6d4]/40 animate-pulseSlow delay-1" />
+        <div className="absolute -left-28 -top-24 w-96 h-96 rounded-full bg-gradient-to-tr from-[#3b82f6]/30 to-[#06b6d4]/18 blur-3xl blob-float" />
+        <div className="absolute right-4 top-10 w-72 h-72 rounded-full bg-gradient-to-tr from-[#06b6d4]/18 to-[#3b82f6]/12 blur-2xl blob-float" />
       </div>
 
       <div className="relative max-w-6xl mx-auto px-6 py-12">
@@ -227,7 +214,6 @@ const FilesDashboard = () => {
             <h1 className="text-3xl md:text-4xl font-semibold text-white">Secure Files</h1>
             <p className="text-sm text-white/75 mt-1">Manage encrypted files and share with your team.</p>
           </div>
-
           <div className="flex items-center gap-3">
             <div className="text-sm text-white/80">Signed in as</div>
             <div className="px-3 py-1 bg-white/8 border border-white/10 rounded text-white/90 text-sm">
@@ -236,7 +222,6 @@ const FilesDashboard = () => {
           </div>
         </div>
 
-        {/* Tab bar */}
         <div className="mb-6">
           <div className="inline-flex items-center gap-2 rounded-2xl p-1">
             <div className="relative z-10 flex gap-2 bg-white/4 backdrop-blur px-2 py-1 rounded-2xl">
@@ -251,7 +236,9 @@ const FilesDashboard = () => {
                     onClick={() => setActiveTab(t.key)}
                     whileHover={{ scale: 1.02 }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      active ? "bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black shadow-md" : "text-white/80 hover:bg-white/6"
+                      active
+                        ? "bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black shadow-md"
+                        : "text-white/80 hover:bg-white/6"
                     }`}
                   >
                     <span className="text-base">{t.icon}</span>
@@ -323,14 +310,14 @@ const FilesDashboard = () => {
                 </div>
 
                 <div className="lg:col-span-1 flex flex-col gap-3">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-white/90">
+                  <div className="preview-box">
                     <div className="text-xs text-white/70 mb-2">Preview</div>
                     <div className="text-sm font-semibold text-white truncate">{file?.name || "No file chosen"}</div>
                     <div className="text-xs text-white/70 mt-2">{type ? `Type: ${type}` : "Type: - "}</div>
                     <div className="text-xs text-white/70">{visibleTo ? `Visible: ${visibleTo}` : "Visible: - "}</div>
                   </div>
 
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="w-full py-2 rounded-md text-sm font-medium bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black shadow">
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="btn-gradient w-full py-2 text-sm font-medium">
                     {loading ? "Uploading..." : "🚀 Upload Secure File"}
                   </motion.button>
 
@@ -347,7 +334,6 @@ const FilesDashboard = () => {
                   <h2 className="text-xl font-semibold text-white">📁 Visible Files</h2>
                   <div className="mt-1 text-sm text-white/70">Files shared with you</div>
                 </div>
-
                 <div className="text-sm text-white/70">
                   <span className="font-semibold text-white">{files.length}</span> files
                 </div>
@@ -364,19 +350,22 @@ const FilesDashboard = () => {
               ) : (
                 <motion.div variants={container} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {files.map((f) => (
-                    <motion.article key={f._id || f.id} variants={card} whileHover={{ scale: 1.04, rotateX: 2, rotateY: -2, transition: { duration: 0.25 } }} className="relative rounded-2xl p-5 border border-white/10 bg-white/6 overflow-hidden" style={{ backdropFilter: "blur(6px)" }}>
-                      <div className="absolute -inset-0.5 rounded-2xl pointer-events-none" style={{ background: "linear-gradient(90deg,#3b82f6, #06b6d4)", opacity: 0.06, filter: "blur(8px)" }} />
+                    <motion.article
+                      key={f._id || f.id}
+                      variants={card}
+                      whileHover={{ scale: 1.04, y: -3, boxShadow: "0 16px 32px rgba(0,0,0,0.25)" }}
+                      className="card-glass relative p-5 overflow-hidden"
+                    >
+                      <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{ background: "linear-gradient(90deg,#3b82f6, #06b6d4)", opacity: 0.05, filter: "blur(12px)" }} />
 
                       <div className="relative z-10">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 pr-4">
                             <h3 className="text-white text-lg font-semibold mb-2 truncate">{f.description || f.originalName || "Untitled file"}</h3>
-
                             <div className="flex items-center gap-2 mb-2">
                               <FileTypePill type={f.type || "other"} />
                               <div className="text-xs text-white/70">{f.organization?.name || "—"}</div>
                             </div>
-
                             <div className="text-xs text-white/70">
                               Uploaded by <span className="font-medium text-white">{f.uploadedBy?.name || "Unknown"}</span>
                               <span className="mx-2">•</span>
@@ -385,7 +374,7 @@ const FilesDashboard = () => {
                           </div>
 
                           <div className="flex flex-col items-end gap-2">
-                            <button onClick={() => handleDownload(f._id || f.id, f.originalName)} className={`flex items-center gap-2 text-xs px-3 py-1 rounded-md ${downloadingFileId === (f._id || f.id) ? "bg-white text-black" : "bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black"}`}>
+                            <button onClick={() => handleDownload(f._id || f.id, f.originalName)} className={`flex items-center gap-2 text-xs px-3 py-1 rounded-md ${downloadingFileId === (f._id || f.id) ? "bg-white text-black" : "btn-gradient text-black"}`}>
                               <FiDownload />
                               <span>Download</span>
                             </button>
