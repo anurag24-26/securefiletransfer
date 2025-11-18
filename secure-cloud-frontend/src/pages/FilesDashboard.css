@@ -5,6 +5,8 @@
   backdrop-filter: blur(12px);
   border-radius: 1rem;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Button gradient */
@@ -30,6 +32,7 @@
   border-radius: 9999px;
   backdrop-filter: blur(6px);
   transition: all 0.3s ease;
+  font-size: 0.75rem;
 }
 .pill-glass:hover {
   transform: scale(1.05);
@@ -42,6 +45,7 @@
   border-radius: 0.75rem;
   padding: 1rem;
   text-align: left;
+  font-size: 0.875rem;
 }
 
 /* Floating blobs */
@@ -65,4 +69,60 @@
 .empty-state p {
   font-size: 0.875rem;
   color: #ffffffaa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .preview-box {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-1.lg\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .lg\:col-span-2 {
+    grid-column: span 1 / span 1 !important;
+  }
+  .lg\:col-span-1 {
+    grid-column: span 1 / span 1 !important;
+  }
+  .inline-flex.items-center.gap-2.rounded-2xl.p-1 {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .flex.items-center.justify-between.mb-8 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .flex.items-center.gap-3 {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+/* Mobile card spacing */
+@media (max-width: 640px) {
+  .card-glass {
+    padding: 1rem;
+  }
+  .flex.items-start.justify-between.gap-3 {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .flex.flex-col.items-end.gap-2 {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .motion-form {
+    gap: 1rem;
+  }
+  .btn-gradient, .pill-glass {
+    width: 100%;
+    text-align: center;
+  }
 }
