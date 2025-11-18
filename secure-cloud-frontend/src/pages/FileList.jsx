@@ -1,31 +1,75 @@
+// FilesDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import Loader from "../components/Loader";
+
+import { FiUpload, FiTrash2, FiDownload } from "react-icons/fi";
+import { HiOutlineDocumentSearch } from "react-icons/hi";
+
+import "./FilesDashboard.css"; // <- new CSS for blobs/animations
+
+// background image
 import bgImage from "../assets/Back2.jpg";
 
+/* Small utility components inside the same file for clarity */
+const FileTypePill = ({ type }) => {
+  const map = {
+    report: { label: "Report", emoji: "📊", cls: "bg-blue-100 text-blue-800" },
+    document: { label: "Document", emoji: "📄", cls: "bg-cyan-100 text-cyan-800" },
+    presentation: { label: "Presentation", emoji: "🎤", cls: "bg-indigo-100 text-indigo-800" },
+    other: { label: "Other", emoji: "📦", cls: "bg-gray-100 text-gray-800" },
+  };
+  const info = map[type] || map.other;
+  return (
+    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${info.cls}`}>
+      <span>{info.emoji}</span>
+      <span>{info.label}</span>
+    </span>
+  );
+};
+
+const EmptyState = () => (
+  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+    <svg width="160" height="120" viewBox="0 0 160 120" fill="none" className="mb-4">
+      <rect x="6" y="18" width="148" height="84" rx="10" fill="#ffffff20" />
+      <rect x="22" y="34" width="60" height="12" rx="4" fill="#ffffff18" />
+      <rect x="22" y="52" width="110" height="10" rx="4" fill="#ffffff18" />
+      <rect x="22" y="68" width="80" height="10" rx="4" fill="#ffffff18" />
+      <circle cx="124" cy="40" r="14" fill="#ffffff18" />
+    </svg>
+
+    <h3 className="text-lg font-semibold text-white">📁 No files yet</h3>
+    <p className="text-sm text-white/80 max-w-xs mt-2">
+      Upload your first secure file to get started. Files will appear here for your team.
+    </p>
+  </div>
+);
+
 const FilesDashboard = () => {
-  const { token,user } = useAuth();
+  const { token, user } = useAuth();
+
   const [activeTab, setActiveTab] = useState("upload");
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
-const [downloadingFileId, setDownloadingFileId] = useState(null);
+  const [downloadingFileId, setDownloadingFileId] = useState(null);
 
+  // upload fields
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
   const [type, setType] = useState("");
   const [visibleTo, setVisibleTo] = useState("");
   const [visibleToType, setVisibleToType] = useState("Department");
+
+  // visibility targets
   const [departments, setDepartments] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
-  const [message, setMessage] = useState("");
-const [fileToDelete, setFileToDelete] = useState(null);
-  const [selectedFileUrl, setSelectedFileUrl] = useState(null); // For in-site view
-  const [selectedFileName, setSelectedFileName] = useState("");
 
-  // Fetch visibility targets
+  const [message, setMessage] = useState("");
+
+  // fetch targets on mount
   useEffect(() => {
     if (!token) return;
     const fetchTargets = async () => {
@@ -38,428 +82,334 @@ const [fileToDelete, setFileToDelete] = useState(null);
         setUsers(res.data.users || []);
       } catch (err) {
         console.error(err);
-        setMessage("Failed to load visibility targets");
+        setMessage("⚠️ Failed to load visibility targets");
       }
     };
     fetchTargets();
   }, [token]);
 
-  // Fetch visible files
+  // fetch files when visible tab active
   useEffect(() => {
     if (activeTab !== "visible" || !token) return;
-    const fetchFiles = async () => {
+    (async () => {
       setLoading(true);
       try {
-        const res = await api.get("/files/visible-files", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get("/files/visible-files", { headers: { Authorization: `Bearer ${token}` } });
         setFiles(res.data.files || []);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
-    };
-    fetchFiles();
+    })();
   }, [activeTab, token]);
 
-  const handleFileChange = (e) => setFile(e.target.files[0]);
-
   const getVisibleOptions = () => {
-    switch (visibleToType) {
-      case "Department":
-        return departments;
-      case "Organization":
-        return organizations;
-      case "User":
-        return users;
-      default:
-        return [];
-    }
+    if (visibleToType === "Department") return departments;
+    if (visibleToType === "Organization") return organizations;
+    if (visibleToType === "User") return users;
+    return [];
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file || !type || !visibleTo) {
-      setMessage("Please fill in all required fields.");
+      setMessage("⚠️ Please fill required fields.");
       return;
     }
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("description", description);
-    formData.append("type", type);
-    formData.append("visibleTo", visibleTo);
-    formData.append("visibleToType", visibleToType);
-
     setLoading(true);
     setMessage("");
-
     try {
-      const res = await api.post("/files/upload", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("description", description);
+      fd.append("type", type);
+      fd.append("visibleTo", visibleTo);
+      fd.append("visibleToType", visibleToType);
+
+      await api.post("/files/upload", fd, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
-      setMessage(res.data.message || "File uploaded successfully!");
+
+      setMessage("🎉 File uploaded successfully!");
       setFile(null);
       setDescription("");
       setType("");
       setVisibleTo("");
-      setVisibleToType("Department");
+
+      // refresh if we're on visible tab
+      if (activeTab === "visible") {
+        const r = await api.get("/files/visible-files", { headers: { Authorization: `Bearer ${token}` } });
+        setFiles(r.data.files || []);
+      }
     } catch (err) {
       console.error(err);
-      setMessage(err.response?.data?.message || "Error uploading file.");
+      setMessage("❌ Upload failed");
+    } finally {
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleDownload = async (fileId, fileName) => {
+    try {
+      setDownloadingFileId(fileId);
+      const res = await api.get(`/files/download/${fileId}`, {
+        responseType: "blob",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName || "file");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
+      alert("❌ Download failed");
+    } finally {
+      setDownloadingFileId(null);
+    }
+  };
+
+  const handleDelete = async (fileObj) => {
+    const fileId = fileObj._id || fileObj.id;
+    if (!fileId) return;
+    if (!confirm("Are you sure you want to delete this file?")) return;
+
+    try {
+      setLoading(true);
+      await api.delete(`/files/delete/${fileId}`, { headers: { Authorization: `Bearer ${token}` } });
+      setFiles((prev) => prev.filter((f) => f._id !== fileId && f.id !== fileId));
+      setMessage("🗑️ File deleted!");
+    } catch (err) {
+      console.error(err);
+      setMessage("⚠️ Delete failed");
     } finally {
       setLoading(false);
     }
   };
-const handleDelete = async (file) => {
-  console.log("Deleting file:", file);
-  if (!file) return;
-  const fileId = file._id || file.id;
-  console.log("File ID:", fileId);
-  if (!fileId) return;
-  
-  try {
-    setLoading(true);
-    await api.delete(`/files/delete/${fileId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setMessage("File deleted successfully!");
-    setFiles((prev) => prev.filter((f) => f._id !== fileId && f.id !== fileId));
-  } catch (err) {
-    console.error(err);
-    setMessage(err.response?.data?.message || "Error deleting file.");
-  } finally {
-    setLoading(false);
-  }
-};
 
+  const fmtDate = (d) => {
+    try {
+      return new Date(d).toLocaleString();
+    } catch {
+      return d;
+    }
+  };
 
-  const handleView = async (fileId) => {
-  try {
-    const res = await api.get(`/files/download/${fileId}`, {
-      responseType: "blob",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    setSelectedFileUrl(url);
-    const fileObj = files.find(f => f.id === fileId || f._id === fileId);
-    setSelectedFileName(fileObj?.originalName || "file");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  } catch (err) {
-    setMessage("Unable to preview this file.");
-  }
-};
-const handleDownload = async (fileId, fileName) => {
-  try {
-    setDownloadingFileId(fileId); // mark downloading
-
-    const response = await api.get(`/files/download/${fileId}`, {
-      responseType: "blob",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const blob = new Blob([response.data]);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", fileName || "file");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-  } catch (error) {
-    console.error("Download failed:", error.response?.data || error.message);
-    alert(error.response?.data?.message || "Download failed");
-  } finally {
-    setDownloadingFileId(null); // reset after complete or error
-  }
-};
-
+  // variants for framer-motion
+  const container = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.03 } } };
+  const card = { hidden: { opacity: 0, y: 10, scale: 0.98 }, visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3 } } };
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-start bg-cover bg-center relative px-4 py-10"
-      style={{ backgroundImage: `url(${bgImage})` }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen relative"
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md"></div>
+      {/* overlay */}
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-7xl">
-        {/* Tabs */}
-        <div className="flex justify-center mb-10 space-x-4">
-          {["upload", "visible"].map((tab) => (
-            <motion.button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setSelectedFileUrl(null);
-              }}
-              whileHover={{ scale: 1.05 }}
-              className={`px-6 py-2.5 rounded-full font-semibold transition-all ${
-                activeTab === tab
-                  ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg"
-                  : "bg-white/10 text-purple-200 border border-white/30 hover:bg-white/20"
-              }`}
-            >
-              {tab === "upload" ? "Upload File" : "Visible Files"}
-            </motion.button>
-          ))}
+      {/* particles / blobs */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-28 -top-24 w-96 h-96 rounded-full bg-gradient-to-tr from-[#3b82f6]/30 to-[#06b6d4]/18 blur-3xl animate-blob slow" />
+        <div className="absolute right-4 top-10 w-72 h-72 rounded-full bg-gradient-to-tr from-[#06b6d4]/18 to-[#3b82f6]/12 blur-2xl animate-blob delay-2 slow" />
+        <div className="absolute left-8 bottom-10 w-1 h-1 rounded-full bg-[#3b82f6]/40 animate-pulseSlow" />
+        <div className="absolute right-20 bottom-20 w-1.5 h-1.5 rounded-full bg-[#06b6d4]/40 animate-pulseSlow delay-1" />
+      </div>
+
+      <div className="relative max-w-6xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-semibold text-white">Secure Files</h1>
+            <p className="text-sm text-white/75 mt-1">Manage encrypted files and share with your team.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-white/80">Signed in as</div>
+            <div className="px-3 py-1 bg-white/8 border border-white/10 rounded text-white/90 text-sm">
+              {user?.name || user?.email || "You"}
+            </div>
+          </div>
         </div>
 
-        {/* File Viewer */}
-        {selectedFileUrl && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10 bg-white/20 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl p-6"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">
-                Viewing: {selectedFileName}
-              </h3>
-              <button
-                onClick={() => setSelectedFileUrl(null)}
-                className="text-red-400 hover:text-red-500 font-semibold"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <iframe
-              src={selectedFileUrl}
-              title="File Viewer"
-              className="w-full h-[600px] rounded-xl border border-white/30 bg-white"
-            ></iframe>
-          </motion.div>
-        )}
-
-        {/* Upload / Visible Tabs */}
-        <AnimatePresence mode="wait">
-          {activeTab === "upload" ? (
-            <motion.div
-              key="upload"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
-              className="mx-auto bg-white/15 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl p-8 w-full max-w-md"
-            >
-              <h2 className="text-3xl font-bold text-center text-white mb-8 drop-shadow-lg">
-                Upload Encrypted File
-              </h2>
-
-              <form onSubmit={handleUpload} className="space-y-5">
-                <div>
-                  <label className="text-purple-200 block mb-1 font-medium">
-                    Select File *
-                  </label>
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-purple-200 block mb-1 font-medium">
-                    Description
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Optional note"
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-purple-200 block mb-1 font-medium">
-                    File Type *
-                  </label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Select type</option>
-                    <option value="report">Report</option>
-                    <option value="document">Document</option>
-                    <option value="presentation">Presentation</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-purple-200 block mb-1 font-medium">
-                    Visible Type *
-                  </label>
-                  <select
-                    value={visibleToType}
-                    onChange={(e) => {
-                      setVisibleToType(e.target.value);
-                      setVisibleTo("");
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="Department">Department</option>
-                    <option value="Organization">Organization</option>
-                    <option value="User">User</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-purple-200 block mb-1 font-medium">
-                    Visible To *
-                  </label>
-                  <select
-                    value={visibleTo}
-                    onChange={(e) => setVisibleTo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 text-black border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Select {visibleToType}</option>
-                    {getVisibleOptions().map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-2.5 rounded-xl font-semibold shadow-lg"
-                >
-                  {loading ? "Uploading..." : "Upload File"}
-                </motion.button>
-
-                {message && (
-                  <p
-                    className={`text-center mt-2 ${
-                      message.toLowerCase().includes("success")
-                        ? "text-green-400"
-                        : "text-red-400"
+        {/* Tab bar */}
+        <div className="mb-6">
+          <div className="inline-flex items-center gap-2 rounded-2xl p-1">
+            <div className="relative z-10 flex gap-2 bg-white/4 backdrop-blur px-2 py-1 rounded-2xl">
+              {[
+                { key: "upload", label: "Upload File", icon: <FiUpload /> },
+                { key: "visible", label: "Visible Files", icon: <HiOutlineDocumentSearch /> },
+              ].map((t) => {
+                const active = activeTab === t.key;
+                return (
+                  <motion.button
+                    key={t.key}
+                    onClick={() => setActiveTab(t.key)}
+                    whileHover={{ scale: 1.02 }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      active ? "bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black shadow-md" : "text-white/80 hover:bg-white/6"
                     }`}
                   >
-                    {message}
-                  </p>
-                )}
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="visible"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
-              className="mx-auto max-w-7xl"
-            >
-              {loading ? (
-                <Loader />
-              ) : files.length === 0 ? (
-                <p className="text-center text-white text-lg font-medium bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 shadow-xl">
-                  No files visible to you.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {files.map((file, index) => (
-                    <motion.div
-                      key={file.id}
-                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{
-                        duration: 0.4,
-                        delay: index * 0.05,
-                        type: "spring",
-                        stiffness: 100,
-                      }}
-                      className="relative bg-white/15 backdrop-blur-lg rounded-3xl p-6 border border-white/30 shadow-2xl hover:shadow-purple-700/40 transition duration-300"
-                    >
-                      <h3 className="text-xl font-semibold text-white mb-3 truncate">
-                        {file.description || "No description available."}
-                      </h3>
+                    <span className="text-base">{t.icon}</span>
+                    <span>{t.label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
-                      <div className="text-gray-200 text-sm space-y-1">
-                        <p>
-                          <span className="font-semibold text-purple-300">
-                            Uploaded By:
-                          </span>{" "}
-                          {file.uploadedBy?.name || "Unknown"}{" "}
-                          <span className="text-gray-400 text-xs">
-                            ({file.uploadedBy?.role || "N/A"})
-                          </span>
-                        </p>
-                        <p>
-                          <span className="font-semibold text-purple-300">
-                            Organization:
-                          </span>{" "}
-                          {file.organization?.name || "N/A"}{" "}
-                          <span className="text-gray-400 text-xs">
-                            ({file.organization?.type || "N/A"})
-                          </span>
-                        </p>
-                        <p>
-                          <span className="font-semibold text-purple-300">
-                            Uploaded On:
-                          </span>{" "}
-                          {new Date(file.uploadedAt).toLocaleString()}
-                        </p>
-                      </div>
+        <AnimatePresence mode="wait">
+          {activeTab === "upload" ? (
+            <motion.section key="upload" initial="hidden" animate="visible" exit="hidden" variants={container} className="mb-12">
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+                <h2 className="text-xl font-semibold text-white inline-block">🔐 Upload Secure File</h2>
+                <motion.div initial={{ width: 0 }} animate={{ width: "9rem", transition: { duration: 0.45, ease: "easeOut" } }} className="h-1 rounded-full bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] mt-2" />
+              </motion.div>
 
-                      <div className="flex gap-2 mt-5">
-                       {/*<motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                         onClick={() => handleView(file.id || file._id)}
-                          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 transition"
-                        >
-                          View
-                        </motion.button> */}
+              <motion.form onSubmit={handleUpload} className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="lg:col-span-2 grid gap-4">
+                  <div>
+                    <label className="block text-sm text-white/85 mb-1">Description</label>
+                    <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short note (optional)" className="w-full rounded-md border border-white/12 bg-white/4 px-3 py-2 text-white placeholder-white/60" />
+                  </div>
 
-                       <motion.button
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  onClick={() => handleDownload(file.id || file._id, file.originalName)}
-  disabled={downloadingFileId === (file.id || file._id)}
-  className={`flex-1 py-2 rounded-xl font-semibold shadow-lg transition ${
-    downloadingFileId === (file.id || file._id)
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700"
-  }`}
->
-  {downloadingFileId === (file.id || file._id) ? "Downloading..." : "Download"}
-</motion.button>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="block text-sm text-white/85 mb-1">Type *</label>
+                      <select value={type} onChange={(e) => setType(e.target.value)} className="w-full rounded-md border border-white/12 bg-white text-black px-3 py-2">
+                        <option value="">Select type</option>
+                        <option value="report">report</option>
+                        <option value="document">document</option>
+                        <option value="presentation">presentation</option>
+                        <option value="other">other</option>
+                      </select>
+                    </div>
 
-                      {((file.uploadedBy?._id === user?.id || file.uploadedBy?.id === user?.id) || user?.role === "superAdmin") && (
-  <motion.button
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  onClick={() => handleDelete(file)}
-  className="flex-1 py-2 rounded-xl bg-red-600 text-white font-semibold shadow-lg hover:bg-red-700 transition"
->
-  Delete
-</motion.button>
+                    <div className="w-48">
+                      <label className="block text-sm text-white/85 mb-1">Choose File *</label>
+                      <input type="file" onChange={(e) => setFile(e.target.files[0])} className="w-full rounded-md border border-white/12 bg-white text-black px-3 py-2" />
+                    </div>
+                  </div>
 
-)}
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="block text-sm text-white/85 mb-1">Visible To Type</label>
+                      <select value={visibleToType} onChange={(e) => { setVisibleToType(e.target.value); setVisibleTo(""); }} className="w-full rounded-md border border-white/12 bg-white text-black px-3 py-2">
+                        <option value="Department">Department</option>
+                        <option value="Organization">Organization</option>
+                        <option value="User">User</option>
+                      </select>
+                    </div>
 
-                      </div>
-                    </motion.div>
-                    
-                  ))}
+                    <div className="flex-1">
+                      <label className="block text-sm text-white/85 mb-1">Visible To</label>
+                      <select value={visibleTo} onChange={(e) => setVisibleTo(e.target.value)} className="w-full rounded-md border border-white/12 bg-white text-black px-3 py-2">
+                        <option value="">Select {visibleToType}</option>
+                        {getVisibleOptions().map((o) => (
+                          <option key={o._id} value={o._id}>
+                            {o.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {message && <div className="text-sm text-white/90">{message}</div>}
                 </div>
+
+                <div className="lg:col-span-1 flex flex-col gap-3">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-white/90">
+                    <div className="text-xs text-white/70 mb-2">Preview</div>
+                    <div className="text-sm font-semibold text-white truncate">{file?.name || "No file chosen"}</div>
+                    <div className="text-xs text-white/70 mt-2">{type ? `Type: ${type}` : "Type: - "}</div>
+                    <div className="text-xs text-white/70">{visibleTo ? `Visible: ${visibleTo}` : "Visible: - "}</div>
+                  </div>
+
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="w-full py-2 rounded-md text-sm font-medium bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black shadow">
+                    {loading ? "Uploading..." : "🚀 Upload Secure File"}
+                  </motion.button>
+
+                  <button type="button" onClick={() => { setFile(null); setDescription(""); setType(""); setVisibleTo(""); setVisibleToType("Department"); setMessage(""); }} className="w-full py-2 rounded-md border border-white/12 text-white/90 bg-white/4 hover:bg-white/6 text-sm">
+                    Clear
+                  </button>
+                </div>
+              </motion.form>
+            </motion.section>
+          ) : (
+            <motion.section key="visible" initial="hidden" animate="visible" exit="hidden" variants={container}>
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">📁 Visible Files</h2>
+                  <div className="mt-1 text-sm text-white/70">Files shared with you</div>
+                </div>
+
+                <div className="text-sm text-white/70">
+                  <span className="font-semibold text-white">{files.length}</span> files
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="rounded-xl p-6 bg-white/4 border border-white/8">
+                  <Loader />
+                </div>
+              ) : files.length === 0 ? (
+                <div className="rounded-xl p-6 bg-white/6 border border-white/8">
+                  <EmptyState />
+                </div>
+              ) : (
+                <motion.div variants={container} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {files.map((f) => (
+                    <motion.article key={f._id || f.id} variants={card} whileHover={{ scale: 1.04, rotateX: 2, rotateY: -2, transition: { duration: 0.25 } }} className="relative rounded-2xl p-5 border border-white/10 bg-white/6 overflow-hidden" style={{ backdropFilter: "blur(6px)" }}>
+                      <div className="absolute -inset-0.5 rounded-2xl pointer-events-none" style={{ background: "linear-gradient(90deg,#3b82f6, #06b6d4)", opacity: 0.06, filter: "blur(8px)" }} />
+
+                      <div className="relative z-10">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 pr-4">
+                            <h3 className="text-white text-lg font-semibold mb-2 truncate">{f.description || f.originalName || "Untitled file"}</h3>
+
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileTypePill type={f.type || "other"} />
+                              <div className="text-xs text-white/70">{f.organization?.name || "—"}</div>
+                            </div>
+
+                            <div className="text-xs text-white/70">
+                              Uploaded by <span className="font-medium text-white">{f.uploadedBy?.name || "Unknown"}</span>
+                              <span className="mx-2">•</span>
+                              <span>{fmtDate(f.uploadedAt)}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2">
+                            <button onClick={() => handleDownload(f._id || f.id, f.originalName)} className={`flex items-center gap-2 text-xs px-3 py-1 rounded-md ${downloadingFileId === (f._id || f.id) ? "bg-white text-black" : "bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-black"}`}>
+                              <FiDownload />
+                              <span>Download</span>
+                            </button>
+
+                            {(f.uploadedBy?._id === user?.id || user?.role === "superAdmin") && (
+                              <button onClick={() => handleDelete(f)} className="text-xs px-3 py-1 rounded-md border border-red-500 text-red-400 hover:bg-red-600/10">
+                                <FiTrash2 />
+                                <span className="ml-1">Delete</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="absolute left-4 right-4 bottom-3 h-[1px] bg-white/6 rounded" />
+                    </motion.article>
+                  ))}
+                </motion.div>
               )}
-            </motion.div>
+            </motion.section>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
