@@ -2,136 +2,166 @@ import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  HomeIcon,
+  BuildingOfficeIcon,
+  FolderIcon,
+  Cog6ToothIcon,
+  DocumentMagnifyingGlassIcon,
+  UserCircleIcon,
+  ArrowRightOnRectangleIcon,
+} from "@heroicons/react/24/outline";
+
 import logo from "../assets/logo.jpg";
 
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // ICON NAV CONFIG
   const commonLinks = [
-    { to: "/", label: "Home" },
-    { to: "/myOrganization", label: "My Organization" },
-    { to: "/yourfiles", label: "Your Files" },
+    { to: "/", label: "Home", icon: <HomeIcon className="h-6 w-6" /> },
+    {
+      to: "/myOrganization",
+      label: "My Organization",
+      icon: <BuildingOfficeIcon className="h-6 w-6" />,
+    },
+    {
+      to: "/yourfiles",
+      label: "Your Files",
+      icon: <FolderIcon className="h-6 w-6" />,
+    },
   ];
 
-  const authLinks = [{ to: "/login", label: "Login/Signup" }];
+  const adminLinks =
+    user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)
+      ? [
+          {
+            to: "/adminSettings",
+            label: "Admin Settings",
+            icon: <Cog6ToothIcon className="h-6 w-6" />,
+          },
+          {
+            to: "/orglist",
+            label: "Organizations",
+            icon: <BuildingOfficeIcon className="h-6 w-6" />,
+          },
+          {
+            to: "/logs",
+            label: "Logs",
+            icon: <DocumentMagnifyingGlassIcon className="h-6 w-6" />,
+          },
+        ]
+      : [];
 
-  const userLinks = [];
-  if (user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
-    userLinks.push(
-      { to: "/adminSettings", label: "Admin Settings" },
-      { to: "/orglist", label: "Organizations" },
-       { to: "/logs", label: "Logs" }
-    );
-  }
+  const authLinks = [
+    {
+      to: "/login",
+      label: "Login / Signup",
+      icon: <UserCircleIcon className="h-6 w-6" />,
+    },
+  ];
 
-  const activeClass =
-    "text-gray-900 font-semibold border-b-2 border-gray-800";
+  const navItems = [...commonLinks, ...(token ? adminLinks : authLinks)];
 
   return (
-    <nav className="fixed top-0 w-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.06)] border-b border-gray-200 z-50 font-[Inter]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+    <nav className="fixed top-0 w-full bg-white border-b shadow-sm z-50 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="Logo"
-              className="h-10 w-10 rounded-full border border-gray-300"
-            />
-            <span className="text-xl font-bold text-gray-800 tracking-tight">
-              Crypterra
-            </span>
-          </Link>
+        {/* Left Logo */}
+        <Link to="/" className="flex items-center gap-3">
+          <img src={logo} className="h-10 w-10 rounded-full border" />
+          <span className="text-xl font-bold text-gray-800">Crypterra</span>
+        </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-8">
-            {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
+        {/* Desktop Icon Menu */}
+        <div className="hidden md:flex items-center gap-6">
+
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                "relative group flex items-center justify-center p-2 rounded-lg transition-all " +
+                (isActive
+                  ? "bg-gray-100 text-black"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-black")
+              }
+            >
+              {item.icon}
+
+              {/* SHOW LABEL ONLY ON HOVER */}
+              <AnimatePresence>
+                <motion.span
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  className="absolute bottom-[-28px] text-xs bg-black text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none shadow-xl"
+                >
+                  {item.label}
+                </motion.span>
+              </AnimatePresence>
+            </NavLink>
+          ))}
+
+          {/* Logout Button */}
+          {token && (
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-gray-800 px-3 py-1.5 border rounded-lg hover:bg-gray-100"
+            >
+              <ArrowRightOnRectangleIcon className="h-6 w-6" />
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setMobileMenu(!mobileMenu)}
+        >
+          ☰
+        </button>
+      </div>
+
+      {/* MOBILE MENU */}
+      <AnimatePresence>
+        {mobileMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="md:hidden bg-white border-t shadow-lg"
+          >
+            {navItems.map((item) => (
               <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  "relative text-[15px] font-medium transition-all pb-1 " +
-                  (isActive
-                    ? activeClass
-                    : "text-gray-600 hover:text-black")
-                }
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileMenu(false)}
+                className="flex items-center gap-3 px-5 py-3 text-gray-700 hover:bg-gray-100"
               >
-                {link.label}
+                {item.icon}
+                <span>{item.label}</span>
               </NavLink>
             ))}
 
+            {/* Mobile logout */}
             {token && (
               <button
                 onClick={handleLogout}
-                className="ml-2 px-4 py-1.5 border border-gray-300 rounded-xl text-gray-800 text-sm font-medium hover:bg-gray-100 transition"
+                className="flex items-center gap-3 w-full px-5 py-3 text-gray-700 border-t hover:bg-gray-100"
               >
+                <ArrowRightOnRectangleIcon className="h-6 w-6" />
                 Logout
               </button>
             )}
-          </div>
-
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-gray-100 transition"
-          >
-            {mobileMenuOpen ? (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="black">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="black">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Dropdown */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.25 }}
-            className="md:hidden bg-white border-t border-gray-200 shadow-inner"
-          >
-            <div className="py-3 space-y-1">
-              {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    "block px-4 py-2 text-base transition " +
-                    (isActive
-                      ? "text-black font-semibold bg-gray-100"
-                      : "text-gray-700 hover:bg-gray-100")
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ))}
-
-              {token && (
-                <button
-                  onClick={handleLogout}
-                  className="w-[90%] mx-auto block mt-2 border border-gray-300 py-2 rounded-xl text-gray-800 font-medium hover:bg-gray-100 transition"
-                >
-                  Logout
-                </button>
-              )}
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
