@@ -3,15 +3,16 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
+// REACT ICONS IMPORTS
 import {
-  HomeIcon,
-  BuildingOfficeIcon,
-  FolderIcon,
-  Cog6ToothIcon,
-  DocumentMagnifyingGlassIcon,
-  UserCircleIcon,
-  ArrowRightOnRectangleIcon,
-} from "@heroicons/react/24/outline";
+  FaHome,
+  FaBuilding,
+  FaRegFolder,
+  FaCog,
+  FaSearch,
+  FaUserCircle,
+  FaSignOutAlt,
+} from "react-icons/fa";
 
 import logo from "../assets/logo.jpg";
 
@@ -25,18 +26,18 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  // ICON NAV CONFIG
+  // NAV CONFIG
   const commonLinks = [
-    { to: "/", label: "Home", icon: <HomeIcon className="h-6 w-6" /> },
+    { to: "/", label: "Home", icon: <FaHome className="h-6 w-6" /> },
     {
       to: "/myOrganization",
       label: "My Organization",
-      icon: <BuildingOfficeIcon className="h-6 w-6" />,
+      icon: <FaBuilding className="h-6 w-6" />,
     },
     {
       to: "/yourfiles",
       label: "Your Files",
-      icon: <FolderIcon className="h-6 w-6" />,
+      icon: <FaRegFolder className="h-6 w-6" />,
     },
   ];
 
@@ -46,17 +47,17 @@ const Navbar = () => {
           {
             to: "/adminSettings",
             label: "Admin Settings",
-            icon: <Cog6ToothIcon className="h-6 w-6" />,
+            icon: <FaCog className="h-6 w-6" />,
           },
           {
             to: "/orglist",
             label: "Organizations",
-            icon: <BuildingOfficeIcon className="h-6 w-6" />,
+            icon: <FaBuilding className="h-6 w-6" />,
           },
           {
             to: "/logs",
             label: "Logs",
-            icon: <DocumentMagnifyingGlassIcon className="h-6 w-6" />,
+            icon: <FaSearch className="h-6 w-6" />,
           },
         ]
       : [];
@@ -65,7 +66,7 @@ const Navbar = () => {
     {
       to: "/login",
       label: "Login / Signup",
-      icon: <UserCircleIcon className="h-6 w-6" />,
+      icon: <FaUserCircle className="h-6 w-6" />,
     },
   ];
 
@@ -75,15 +76,14 @@ const Navbar = () => {
     <nav className="fixed top-0 w-full bg-white border-b shadow-sm z-50 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
 
-        {/* Left Logo */}
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
           <img src={logo} className="h-10 w-10 rounded-full border" />
           <span className="text-xl font-bold text-gray-800">Crypterra</span>
         </Link>
 
-        {/* Desktop Icon Menu */}
+        {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-6">
-
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -97,7 +97,7 @@ const Navbar = () => {
             >
               {item.icon}
 
-              {/* SHOW LABEL ONLY ON HOVER */}
+              {/* Tooltip */}
               <AnimatePresence>
                 <motion.span
                   initial={{ opacity: 0, y: 5 }}
@@ -111,13 +111,13 @@ const Navbar = () => {
             </NavLink>
           ))}
 
-          {/* Logout Button */}
+          {/* Logout */}
           {token && (
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-gray-800 px-3 py-1.5 border rounded-lg hover:bg-gray-100"
             >
-              <ArrowRightOnRectangleIcon className="h-6 w-6" />
+              <FaSignOutAlt className="h-6 w-6" />
             </button>
           )}
         </div>
@@ -131,7 +131,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {mobileMenu && (
           <motion.div
@@ -152,13 +152,12 @@ const Navbar = () => {
               </NavLink>
             ))}
 
-            {/* Mobile logout */}
             {token && (
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 w-full px-5 py-3 text-gray-700 border-t hover:bg-gray-100"
               >
-                <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                <FaSignOutAlt className="h-6 w-6" />
                 Logout
               </button>
             )}
