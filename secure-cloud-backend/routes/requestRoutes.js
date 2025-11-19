@@ -136,6 +136,7 @@ router.post("/:id/action", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Current user not found" });
 
     /* ----------------- PERMISSION CHECK ------------------- */
+/* ----------------- PERMISSION CHECK ------------------- */
 let allowed = false;
 
 // --- Admin hierarchy permission ---
@@ -145,7 +146,7 @@ if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
   if (currentUser.role === "superAdmin") {
     orgIds = (await Organization.find()).map((o) => o._id.toString());
   } else if (currentUser.orgId) {
-    orgIds = (await getAllOrgIds(currentUser.orgId)).map((id) => id.toString());
+    orgIds = (await getAllOrgIds(currentUser.orgId)).map(id => id.toString());
   }
 
   const reqOrg = request.orgId?.toString();
@@ -154,13 +155,13 @@ if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
   if (
     (reqOrg && orgIds.includes(reqOrg)) ||
     (reqDept && orgIds.includes(reqDept)) ||
-    (reqDept && currentUser.orgId?.toString() === reqDept) // deptAdmin approving their own dept
+    (reqDept && currentUser.orgId?.toString() === reqDept)
   ) {
     allowed = true;
   }
 }
 
-// --- Target user can accept join via email or user id ---
+// --- Target user can accept JOIN requests ---
 if (request.type === "join") {
   if (
     (request.targetUser && request.targetUser.toString() === currentUser._id.toString()) ||
@@ -170,13 +171,22 @@ if (request.type === "join") {
   }
 }
 
-// --- Sender cannot approve ---
+// --- Target user can accept ADMIN or ROLECHANGE requests ---
+if (["admin", "roleChange"].includes(request.type)) {
+  if (request.targetUser?.toString() === currentUser._id.toString()) {
+    allowed = true;
+  }
+}
+
+// --- Sender cannot approve their own request ---
 if (request.sender.toString() === currentUser._id.toString()) {
   return res.status(403).json({ message: "You cannot approve your own request" });
 }
 
 if (!allowed) {
-  return res.status(403).json({ message: "Forbidden: You are not allowed to manage this request" });
+  return res.status(403).json({
+    message: "Forbidden: You are not allowed to manage this request"
+  });
 }
 
 
