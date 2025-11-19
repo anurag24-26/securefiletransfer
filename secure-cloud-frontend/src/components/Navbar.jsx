@@ -27,7 +27,7 @@ const DropdownMenu = ({ children, trigger, className = "" }) => {
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-full transition duration-150 ease-in-out hover:bg-gray-100"
+        className="p-2 rounded-full transition duration-150 ease-in-out hover:bg-white/40"
       >
         {trigger}
       </button>
@@ -39,7 +39,9 @@ const DropdownMenu = ({ children, trigger, className = "" }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-3 w-48 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-xl shadow-xl z-50"
+            className="absolute right-0 mt-3 w-48 origin-top-right 
+              bg-white/70 backdrop-blur-xl 
+              border border-white/40 rounded-2xl shadow-lg z-50"
           >
             <div className="py-1" onClick={() => setIsOpen(false)}>
               {children}
@@ -52,13 +54,15 @@ const DropdownMenu = ({ children, trigger, className = "" }) => {
 };
 
 const DropdownItem = ({ to, label, Icon }) => {
-  const activeClass = "bg-gray-50 text-gray-900";
+  const activeClass = "bg-white/50 text-[#0A1A4F]";
 
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${isActive ? activeClass : ""}`
+        `flex items-center px-4 py-2 text-sm text-gray-700 
+          hover:bg-white/40 backdrop-blur-md transition rounded-md
+          ${isActive ? activeClass : ""}`
       }
     >
       <Icon className="mr-3 h-4 w-4" />
@@ -67,7 +71,7 @@ const DropdownItem = ({ to, label, Icon }) => {
   );
 };
 
-// --- Navbar Component ---
+// --- NAVBAR ---
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
@@ -97,45 +101,57 @@ const Navbar = () => {
     );
   }
 
-  const activeClass = "bg-gray-100 text-gray-900 font-semibold";
+  const activeClass = "bg-white/50 text-[#0A1A4F] font-semibold";
 
   return (
-    <nav className="fixed top-0 w-full bg-white shadow-[0_2px_15px_rgba(0,0,0,0.08)] border-b border-gray-100 z-50 font-[Inter]">
+    <nav className="
+      fixed top-0 w-full z-50 
+      bg-white/25 backdrop-blur-xl 
+      border-b border-white/40 
+      shadow-[0_4px_20px_rgba(0,0,0,0.05)]
+      font-[Inter]
+    ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
 
-          {/* LOGO + BRAND NAME (Orbitron + Dark Blue) */}
+          {/* LOGO + BRAND */}
           <Link to="/" className="flex items-center gap-3">
             <img
               src={logo}
               alt="Crypterra Logo"
-              className="h-10 w-10 rounded-full border border-gray-300 object-cover"
+              className="h-10 w-10 rounded-full border border-white/40 shadow-sm object-cover"
             />
 
-            {/* UPDATED TEXT */}
-       <span
-  className="text-2xl font-bold tracking-tight"
-  style={{
-    fontFamily: "Orbitron, sans-serif",
-    color: "#0A1A4F",   // Very dark blue
-    letterSpacing: "0.02em"
-  }}
->
-  Crypterra
-</span>
-
+            <span
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                color: "#0A1A4F",
+                letterSpacing: "0.02em"
+              }}
+            >
+              Crypterra
+            </span>
           </Link>
 
           {/* DESKTOP MENU */}
-          <div className="hidden md:flex items-center space-x-2 p-1 bg-white border border-gray-200 rounded-full shadow-inner-sm">
+          <div className="
+            hidden md:flex items-center space-x-2 
+            p-1 rounded-full 
+            bg-white/30 backdrop-blur-xl 
+            border border-white/40 shadow-inner
+          ">
 
             {commonLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-2 text-sm font-medium transition-all rounded-full whitespace-nowrap 
-                  ${isActive ? activeClass : "text-gray-600 hover:bg-gray-50 hover:text-black"}`}
+                  `flex items-center px-4 py-2 text-sm font-medium rounded-full 
+                   transition-all 
+                   ${isActive 
+                      ? activeClass 
+                      : "text-gray-700 hover:bg-white/40 hover:text-[#0A1A4F]"}`}
               >
                 <link.icon className="h-4 w-4 mr-2" />
                 {link.label}
@@ -147,8 +163,10 @@ const Navbar = () => {
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `px-4 py-2 text-sm font-medium transition-all rounded-full 
-                  ${isActive ? "bg-indigo-600 text-white" : "text-indigo-600 hover:bg-indigo-50 border border-indigo-300"}`}
+                  `px-4 py-2 text-sm font-medium rounded-full transition-all
+                  ${isActive 
+                    ? "bg-[#0A1A4F] text-white" 
+                    : "text-[#0A1A4F] border border-[#0A1A4F]/40 hover:bg-[#0A1A4F]/10"}`}
               >
                 {link.label}
               </NavLink>
@@ -156,18 +174,18 @@ const Navbar = () => {
 
             {/* USER + ADMIN ICONS */}
             {token && (
-              <div className="flex items-center space-x-1 ml-2 bg-white rounded-full">
+              <div className="flex items-center space-x-1 ml-2 bg-white/20 backdrop-blur-lg rounded-full px-2 py-1">
 
                 {isAdmin && (
-                  <DropdownMenu trigger={<Settings className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
-                    <div className="block px-4 py-2 text-xs font-semibold text-gray-400">Admin Tools</div>
+                  <DropdownMenu trigger={<Settings className="h-5 w-5 text-gray-700" />}>
+                    <div className="block px-4 py-2 text-xs font-semibold text-gray-500">Admin Tools</div>
                     {adminLinks.map(link => (
                       <DropdownItem key={link.to} to={link.to} label={link.label} Icon={link.icon} />
                     ))}
                   </DropdownMenu>
                 )}
 
-                <DropdownMenu trigger={<User className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
+                <DropdownMenu trigger={<User className="h-5 w-5 text-gray-700" />}>
                   {user && (
                     <>
                       <div className="block px-4 py-2 text-sm text-gray-900 font-medium truncate">{user.email}</div>
@@ -181,17 +199,16 @@ const Navbar = () => {
                     <LogOut className="mr-3 h-4 w-4" /> Logout
                   </button>
                 </DropdownMenu>
-
               </div>
             )}
           </div>
 
-          {/* MOBILE MENU TOGGLE */}
+          {/* MOBILE TOGGLE */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-gray-100"
+            className="md:hidden p-2 rounded-md hover:bg-white/40 backdrop-blur-xl"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6 text-black" /> : <Menu className="h-6 w-6 text-black" />}
+            {mobileMenuOpen ? <X className="h-6 w-6 text-[#0A1A4F]" /> : <Menu className="h-6 w-6 text-[#0A1A4F]" />}
           </button>
 
         </div>
@@ -205,17 +222,24 @@ const Navbar = () => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden bg-white border-t border-gray-200"
+            className="
+              md:hidden bg-white/60 
+              backdrop-blur-xl 
+              border-t border-white/40
+            "
           >
             <div className="py-3 space-y-1">
+
               {[...commonLinks, ...(token ? [] : authLinks)].map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    "flex items-center px-4 py-2 text-base transition " +
-                    (isActive ? "text-black font-semibold bg-gray-100" : "text-gray-700 hover:bg-gray-100")}
+                    "flex items-center px-4 py-2 text-base transition rounded-md " +
+                    (isActive 
+                      ? "text-[#0A1A4F] bg-white/40" 
+                      : "text-gray-800 hover:bg-white/50")}
                 >
                   <link.icon className="mr-3 h-5 w-5" />
                   {link.label}
@@ -223,16 +247,18 @@ const Navbar = () => {
               ))}
 
               {isAdmin && (
-                <div className="border-t border-gray-100 pt-2">
-                  <div className="px-4 py-2 text-sm font-semibold text-gray-500">Admin Tools</div>
+                <div className="border-t border-white/40 pt-2">
+                  <div className="px-4 py-2 text-sm font-semibold text-gray-600">Admin Tools</div>
                   {adminLinks.map(link => (
                     <NavLink
                       key={link.to}
                       to={link.to}
                       onClick={() => setMobileMenuOpen(false)}
                       className={({ isActive }) =>
-                        "flex items-center px-4 py-2 text-base transition " +
-                        (isActive ? "text-black font-semibold bg-gray-100" : "text-gray-700 hover:bg-gray-100")}
+                        "flex items-center px-4 py-2 text-base rounded-md transition " +
+                        (isActive 
+                          ? "text-[#0A1A4F] bg-white/40" 
+                          : "text-gray-700 hover:bg-white/50")}
                     >
                       <link.icon className="mr-3 h-5 w-5" /> {link.label}
                     </NavLink>
@@ -243,7 +269,8 @@ const Navbar = () => {
               {token && (
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-[90%] mx-auto mt-3 border border-red-300 py-2 rounded-full text-red-600 font-medium hover:bg-red-50 justify-center"
+                  className="flex items-center w-[90%] mx-auto mt-3 border border-red-300 py-2 rounded-full 
+                  text-red-600 font-medium hover:bg-red-50"
                 >
                   <LogOut className="mr-2 h-5 w-5" /> Logout
                 </button>
