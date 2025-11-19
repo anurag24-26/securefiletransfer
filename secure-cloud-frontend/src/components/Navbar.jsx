@@ -58,7 +58,9 @@ const DropdownItem = ({ to, label, Icon }) => {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${isActive ? activeClass : ""}`
+        `flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${
+          isActive ? activeClass : ""
+        }`
       }
     >
       <Icon className="mr-3 h-4 w-4" />
@@ -104,7 +106,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
 
-          {/* LOGO + BRAND NAME (Orbitron + Dark Blue) */}
+          {/* LOGO */}
           <Link to="/" className="flex items-center gap-3">
             <img
               src={logo}
@@ -112,52 +114,42 @@ const Navbar = () => {
               className="h-10 w-10 rounded-full border border-gray-300 object-cover"
             />
 
-            {/* UPDATED TEXT */}
-       <span
-            className="text-2xl font-bold tracking-tight"
-            style={{
-            fontFamily: "Orbitron, sans-serif",
-            color: "#0A1A4F",   // Very dark blue
-            letterSpacing: "0.02em"
-           }}
->
-            Crypterra
-       </span>
-
+            <span
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                color: "#0A1A4F",
+                letterSpacing: "0.02em"
+              }}
+            >
+              Crypterra
+            </span>
           </Link>
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex items-center space-x-2 p-1 bg-white border border-gray-200 rounded-full shadow-inner-sm">
 
+            {/* Common Links */}
             {commonLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-2 text-sm font-medium transition-all rounded-full whitespace-nowrap 
-                  ${isActive ? activeClass : "text-gray-600 hover:bg-gray-50 hover:text-black"}`}
+                  `flex items-center px-4 py-2 text-sm font-medium transition-all rounded-full whitespace-nowrap ${
+                    isActive
+                      ? activeClass
+                      : "text-gray-600 hover:bg-gray-50 hover:text-black"
+                  }`
+                }
               >
                 <link.icon className="h-4 w-4 mr-2" />
                 {link.label}
               </NavLink>
             ))}
 
-            {!token && authLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  `px-4 py-2 text-sm font-medium transition-all rounded-full 
-                  ${isActive ? "bg-indigo-600 text-white" : "text-indigo-600 hover:bg-indigo-50 border border-indigo-300"}`}
-              >
-                {link.label}
-              </NavLink>
-            ))}
-
-            {/* USER + ADMIN ICONS */}
+            {/* USER / ADMIN */}
             {token && (
               <div className="flex items-center space-x-1 ml-2 bg-white rounded-full">
-
                 {isAdmin && (
                   <DropdownMenu trigger={<Settings className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
                     <div className="block px-4 py-2 text-xs font-semibold text-gray-400">Admin Tools</div>
@@ -181,12 +173,29 @@ const Navbar = () => {
                     <LogOut className="mr-3 h-4 w-4" /> Logout
                   </button>
                 </DropdownMenu>
-
               </div>
             )}
+
+            {/* LOGIN / SIGNUP → ALWAYS LAST */}
+            {!token &&
+              authLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  className={({ isActive }) =>
+                    `px-4 py-2 text-sm font-medium transition-all rounded-full ${
+                      isActive
+                        ? "bg-indigo-600 text-white"
+                        : "text-indigo-600 hover:bg-indigo-50 border border-indigo-300"
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              ))}
           </div>
 
-          {/* MOBILE MENU TOGGLE */}
+          {/* MOBILE MENU BUTTON */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-md hover:bg-gray-100"
@@ -208,6 +217,7 @@ const Navbar = () => {
             className="md:hidden bg-white border-t border-gray-200"
           >
             <div className="py-3 space-y-1">
+
               {[...commonLinks, ...(token ? [] : authLinks)].map((link) => (
                 <NavLink
                   key={link.to}
@@ -248,6 +258,7 @@ const Navbar = () => {
                   <LogOut className="mr-2 h-5 w-5" /> Logout
                 </button>
               )}
+
             </div>
           </motion.div>
         )}
