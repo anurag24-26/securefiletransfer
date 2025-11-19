@@ -150,6 +150,8 @@ const Navbar = () => {
             {/* USER / ADMIN */}
             {token && (
               <div className="flex items-center space-x-1 ml-2 bg-white rounded-full">
+
+                {/* ADMIN SETTINGS DROPDOWN */}
                 {isAdmin && (
                   <DropdownMenu trigger={<Settings className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
                     <div className="block px-4 py-2 text-xs font-semibold text-gray-400">Admin Tools</div>
@@ -159,6 +161,7 @@ const Navbar = () => {
                   </DropdownMenu>
                 )}
 
+                {/* USER DROPDOWN */}
                 <DropdownMenu trigger={<User className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
                   {user && (
                     <>
@@ -166,17 +169,20 @@ const Navbar = () => {
                       <div className="block px-4 pb-2 text-xs text-gray-500 capitalize border-b border-gray-100">{user.role}</div>
                     </>
                   )}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <LogOut className="mr-3 h-4 w-4" /> Logout
-                  </button>
                 </DropdownMenu>
+
+                {/* 🔴 REPLACED LAST ICON → LOGOUT BUTTON */}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center px-4 py-2 ml-2 rounded-full text-sm font-semibold text-red-600 border border-red-300 hover:bg-red-50 transition"
+                >
+                  <LogOut className="h-4 w-4 mr-2" /> Logout
+                </button>
+
               </div>
             )}
 
-            {/* LOGIN / SIGNUP → ALWAYS LAST */}
+            {/* LOGIN / SIGNUP */}
             {!token &&
               authLinks.map((link) => (
                 <NavLink
