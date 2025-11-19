@@ -39,7 +39,7 @@ const DropdownMenu = ({ children, trigger }) => {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((p) => !p)}
-        className="p-2 rounded-full hover:bg-gray-100"
+        className="p-2 rounded-full hover:bg-white/30 backdrop-blur-sm transition"
       >
         {trigger}
       </button>
@@ -50,7 +50,7 @@ const DropdownMenu = ({ children, trigger }) => {
             initial={{ opacity: 0, scale: 0.9, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -4 }}
-            className="absolute right-0 mt-3 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50"
+            className="absolute right-0 mt-3 w-48 bg-white/60 backdrop-blur-xl border border-white/30 shadow-lg rounded-xl z-50"
           >
             <div className="py-1">{children}</div>
           </motion.div>
@@ -63,7 +63,7 @@ const DropdownMenu = ({ children, trigger }) => {
 const DropdownItem = ({ to, label, Icon }) => (
   <NavLink
     to={to}
-    className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+    className="flex items-center px-4 py-2 text-sm hover:bg-white/40 transition rounded-md"
   >
     <Icon className="mr-3 h-4 w-4" />
     {label}
@@ -103,7 +103,10 @@ const Navbar = () => {
   const authLinks = [{ to: "/login", label: "Login/Signup" }];
 
   return (
-    <nav className="fixed top-0 w-full bg-white border-b border-gray-200 shadow-sm z-50">
+    <nav className="fixed top-0 w-full z-50 
+      bg-white/50 backdrop-blur-xl 
+      border-b border-white/30 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+      
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         
         {/* Logo */}
@@ -111,7 +114,7 @@ const Navbar = () => {
           <img
             src={logo}
             alt="logo"
-            className="h-10 w-10 rounded-full border border-gray-300"
+            className="h-10 w-10 rounded-full border border-white/50 shadow-sm"
           />
           <span
             className="text-2xl font-bold"
@@ -122,13 +125,16 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-2 p-1 bg-white rounded-full border border-gray-200">
+        <div className="hidden md:flex items-center gap-2 p-1 
+          bg-white/40 backdrop-blur-xl 
+          rounded-full border border-white/30 shadow-sm">
+          
           {commonLinks.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
-              className="flex items-center gap-2 px-4 py-2 rounded-full 
-              hover:bg-gray-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-full
+              hover:bg-white/60 transition"
               style={{
                 color: "#0A1A4F",
                 fontWeight: 600,
@@ -144,8 +150,8 @@ const Navbar = () => {
               
               {/* Admin Dropdown */}
               {isAdmin && (
-                <DropdownMenu trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />}>
-                  <div className="px-4 py-1 text-xs font-semibold text-gray-400">
+                <DropdownMenu trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />} >
+                  <div className="px-4 py-1 text-xs font-semibold text-gray-600">
                     Admin Tools
                   </div>
                   {adminLinks.map((a) => (
@@ -160,11 +166,11 @@ const Navbar = () => {
               )}
 
               {/* User Dropdown */}
-              <DropdownMenu trigger={<User className="h-5 w-5 text-[#0A1A4F]" />}>
-                <div className="px-4 py-2 font-medium text-sm border-b">
+              <DropdownMenu trigger={<User className="h-5 w-5 text-[#0A1A4F]" />} >
+                <div className="px-4 py-2 font-medium text-sm border-b border-white/40">
                   {user.email}
                 </div>
-                <div className="px-4 py-2 text-xs capitalize text-gray-500">
+                <div className="px-4 py-2 text-xs capitalize text-gray-600">
                   {user.role}
                 </div>
               </DropdownMenu>
@@ -172,7 +178,9 @@ const Navbar = () => {
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-300 rounded-full hover:bg-red-50"
+                className="flex items-center gap-2 px-4 py-2 
+                text-red-600 border border-red-300 rounded-full
+                hover:bg-red-50 transition"
               >
                 <LogOut className="h-4 w-4" /> Logout
               </button>
@@ -184,7 +192,9 @@ const Navbar = () => {
               <NavLink
                 key={l.to}
                 to={l.to}
-                className="px-4 py-2 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                className="px-4 py-2 rounded-full 
+                border border-indigo-300 text-indigo-600 
+                hover:bg-indigo-50 transition"
               >
                 {l.label}
               </NavLink>
@@ -208,7 +218,8 @@ const Navbar = () => {
             animate={{ opacity: 1, scaleY: 1 }}
             exit={{ opacity: 0, scaleY: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden origin-top bg-white border-t border-gray-200"
+            className="md:hidden origin-top
+            bg-white/50 backdrop-blur-xl border-t border-white/30"
           >
             <div className="py-3 flex flex-col gap-1">
 
@@ -217,7 +228,8 @@ const Navbar = () => {
                   key={l.to}
                   to={l.to}
                   onClick={() => setMobileMenu(false)}
-                  className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
+                  className="flex items-center gap-3 px-4 py-2 
+                  hover:bg-white/40 transition rounded-md"
                   style={{ color: "#0A1A4F", fontWeight: 600 }}
                 >
                   <l.icon className="h-5 w-5" style={{ color: "#0A1A4F" }} />
@@ -227,7 +239,7 @@ const Navbar = () => {
 
               {isAdmin && (
                 <>
-                  <div className="px-4 py-2 text-sm text-gray-500 font-semibold">
+                  <div className="px-4 py-2 text-sm text-gray-600 font-semibold">
                     Admin Tools
                   </div>
                   {adminLinks.map((a) => (
@@ -235,7 +247,8 @@ const Navbar = () => {
                       key={a.to}
                       to={a.to}
                       onClick={() => setMobileMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
+                      className="flex items-center gap-3 px-4 py-2 
+                      hover:bg-white/40 transition rounded-md"
                     >
                       <a.icon className="h-5 w-5" />
                       {a.label}
@@ -247,7 +260,9 @@ const Navbar = () => {
               {token ? (
                 <button
                   onClick={handleLogout}
-                  className="flex items-center justify-center gap-2 w-[90%] mx-auto mt-3 px-4 py-2 rounded-full border border-red-300 text-red-600 hover:bg-red-50"
+                  className="flex items-center justify-center gap-2 w-[90%] mx-auto mt-3 px-4 py-2 
+                  rounded-full border border-red-300 text-red-600 
+                  hover:bg-red-50 transition"
                 >
                   <LogOut className="h-5 w-5" /> Logout
                 </button>
@@ -257,7 +272,9 @@ const Navbar = () => {
                     key={l.to}
                     to={l.to}
                     onClick={() => setMobileMenu(false)}
-                    className="px-4 py-2 text-indigo-600 text-center border border-indigo-300 rounded-full mx-4"
+                    className="px-4 py-2 text-indigo-600 text-center 
+                    border border-indigo-300 rounded-full mx-4 
+                    hover:bg-indigo-50 transition"
                   >
                     {l.label}
                   </NavLink>
