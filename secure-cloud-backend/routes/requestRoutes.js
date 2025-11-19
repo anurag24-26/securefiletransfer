@@ -135,47 +135,50 @@ router.post("/:id/action", authMiddleware, async (req, res) => {
     if (!currentUser)
       return res.status(404).json({ message: "Current user not found" });
 
-    let allowed = false;
+    /* ----------------- PERMISSION CHECK ------------------- */
+let allowed = false;
 
-    /* ---------------- ADMIN PERMISSION ---------------- */
-    if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
-      let orgIds = [];
+// --- Admin hierarchy permission ---
+if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
+  let orgIds = [];
 
-      if (currentUser.role === "superAdmin") {
-        orgIds = (await Organization.find()).map((o) => o._id.toString());
-      } else if (currentUser.orgId) {
-        orgIds = await getAllOrgIds(currentUser.orgId);
-        orgIds = orgIds.map((id) => id.toString());
-      }
+  if (currentUser.role === "superAdmin") {
+    orgIds = (await Organization.find()).map((o) => o._id.toString());
+  } else if (currentUser.orgId) {
+    orgIds = (await getAllOrgIds(currentUser.orgId)).map((id) => id.toString());
+  }
 
-      const reqOrg = request.orgId ? request.orgId.toString() : null;
-      const reqDept = request.departmentId ? request.departmentId.toString() : null;
+  const reqOrg = request.orgId?.toString();
+  const reqDept = request.departmentId?.toString();
 
-      if ((reqOrg && orgIds.includes(reqOrg)) || (reqDept && orgIds.includes(reqDept)))
-        allowed = true;
-    }
+  if (
+    (reqOrg && orgIds.includes(reqOrg)) ||
+    (reqDept && orgIds.includes(reqDept)) ||
+    (reqDept && currentUser.orgId?.toString() === reqDept) // deptAdmin approving their own dept
+  ) {
+    allowed = true;
+  }
+}
 
-    /* ------------ ONLY TARGET USER CAN ACCEPT JOIN REQUESTS ----------- */
-    if (request.type === "join") {
-      if (
-        request.targetUser &&
-        request.targetUser.toString() === currentUser._id.toString()
-      ) {
-        allowed = true;
-      }
-    }
+// --- Target user can accept join via email or user id ---
+if (request.type === "join") {
+  if (
+    (request.targetUser && request.targetUser.toString() === currentUser._id.toString()) ||
+    (request.email && request.email.toLowerCase() === currentUser.email.toLowerCase())
+  ) {
+    allowed = true;
+  }
+}
 
-    /* --------- DO NOT ALLOW SENDER TO APPROVE THEIR OWN REQUEST -------- */
-    if (request.sender.toString() === currentUser._id.toString()) {
-      return res.status(403).json({
-        message: "You cannot approve your own request",
-      });
-    }
+// --- Sender cannot approve ---
+if (request.sender.toString() === currentUser._id.toString()) {
+  return res.status(403).json({ message: "You cannot approve your own request" });
+}
 
-    if (!allowed)
-      return res.status(403).json({
-        message: "Forbidden: You are not allowed to manage this request",
-      });
+if (!allowed) {
+  return res.status(403).json({ message: "Forbidden: You are not allowed to manage this request" });
+}
+
 
     /* ----------------- REJECT ------------------ */
     if (action === "reject") {
