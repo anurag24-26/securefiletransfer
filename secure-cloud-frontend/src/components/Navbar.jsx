@@ -25,7 +25,6 @@ const DropdownMenu = ({ children, trigger }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  // FIX: Mobile-safe outside click handler
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -106,6 +105,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 w-full bg-white border-b border-gray-200 shadow-sm z-50">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
           <img
@@ -127,18 +127,24 @@ const Navbar = () => {
             <NavLink
               key={l.to}
               to={l.to}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-gray-600 hover:bg-gray-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-full 
+              hover:bg-gray-50"
+              style={{
+                color: "#0A1A4F",
+                fontWeight: 600,
+              }}
             >
-              <l.icon className="h-4 w-4" />
+              <l.icon className="h-4 w-4" style={{ color: "#0A1A4F" }} />
               {l.label}
             </NavLink>
           ))}
 
           {token && (
             <div className="flex items-center gap-1 ml-1">
+              
               {/* Admin Dropdown */}
               {isAdmin && (
-                <DropdownMenu trigger={<Settings className="h-5 w-5" />}>
+                <DropdownMenu trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />}>
                   <div className="px-4 py-1 text-xs font-semibold text-gray-400">
                     Admin Tools
                   </div>
@@ -154,7 +160,7 @@ const Navbar = () => {
               )}
 
               {/* User Dropdown */}
-              <DropdownMenu trigger={<User className="h-5 w-5" />}>
+              <DropdownMenu trigger={<User className="h-5 w-5 text-[#0A1A4F]" />}>
                 <div className="px-4 py-2 font-medium text-sm border-b">
                   {user.email}
                 </div>
@@ -194,7 +200,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Menu — FIXED VERSION */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenu && (
           <motion.div
@@ -205,14 +211,16 @@ const Navbar = () => {
             className="md:hidden origin-top bg-white border-t border-gray-200"
           >
             <div className="py-3 flex flex-col gap-1">
+
               {commonLinks.map((l) => (
                 <NavLink
                   key={l.to}
                   to={l.to}
                   onClick={() => setMobileMenu(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
+                  style={{ color: "#0A1A4F", fontWeight: 600 }}
                 >
-                  <l.icon className="h-5 w-5" />
+                  <l.icon className="h-5 w-5" style={{ color: "#0A1A4F" }} />
                   {l.label}
                 </NavLink>
               ))}
