@@ -84,6 +84,7 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 /* --------------------- Fetch Pending Requests (Admins) --------------------- */
+/* --------------------- Fetch Pending Requests (Admins) --------------------- */
 router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.userId);
@@ -97,8 +98,12 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
     }
 
     const requests = await Request.find({
-      $or: [{ orgId: { $in: orgIds } }, { departmentId: { $in: orgIds } }],
+      $or: [
+        { orgId: { $in: orgIds } },
+        { departmentId: { $in: orgIds } }
+      ],
       status: "pending",
+      sender: { $ne: currentUser._id }  // 🔥 FIX: Don't show your own requests
     })
       .populate("sender", "name email role")
       .populate("targetUser", "name email role")
@@ -111,6 +116,7 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
 
 /* --------------------- Approve / Reject Request --------------------- */
 /* --------------------- Approve / Reject Request --------------------- */
