@@ -26,7 +26,8 @@ const Navbar = () => {
   if (user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
     userLinks.push(
       { to: "/adminSettings", label: "Admin Settings" },
-      { to: "/orglist", label: "Organizations" }
+      { to: "/orglist", label: "Organizations" },
+       { to: "/logs", label: "Logs" }
     );
   }
 
