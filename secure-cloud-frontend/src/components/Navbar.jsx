@@ -3,47 +3,57 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "../assets/logo.jpg";
-import { 
-  Menu, X, Settings, LogOut, User, Users, Sliders, FileText, 
-  Home, Briefcase, Folder 
-} from 'lucide-react';
 
-// --- Utility Dropdown ---
-const DropdownMenu = ({ children, trigger, className = "" }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+import {
+  Menu,
+  X,
+  Settings,
+  LogOut,
+  User,
+  Users,
+  Sliders,
+  FileText,
+  Home,
+  Briefcase,
+  Folder,
+} from "lucide-react";
 
+// ------------------------------
+// SAFE DROPDOWN FOR MOBILE
+// ------------------------------
+const DropdownMenu = ({ children, trigger }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // FIX: Mobile-safe outside click handler
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
   }, []);
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className="relative" ref={ref}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-full transition duration-150 ease-in-out hover:bg-gray-100"
+        onClick={() => setOpen((p) => !p)}
+        className="p-2 rounded-full hover:bg-gray-100"
       >
         {trigger}
       </button>
 
       <AnimatePresence>
-        {isOpen && (
+        {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+            initial={{ opacity: 0, scale: 0.9, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -5 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-3 w-48 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-xl shadow-xl z-50"
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            className="absolute right-0 mt-3 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50"
           >
-            <div className="py-1" onClick={() => setIsOpen(false)}>
-              {children}
-            </div>
+            <div className="py-1">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -51,29 +61,26 @@ const DropdownMenu = ({ children, trigger, className = "" }) => {
   );
 };
 
-const DropdownItem = ({ to, label, Icon }) => {
-  const activeClass = "bg-gray-50 text-gray-900";
+const DropdownItem = ({ to, label, Icon }) => (
+  <NavLink
+    to={to}
+    className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+  >
+    <Icon className="mr-3 h-4 w-4" />
+    {label}
+  </NavLink>
+);
 
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out ${
-          isActive ? activeClass : ""
-        }`
-      }
-    >
-      <Icon className="mr-3 h-4 w-4" />
-      {label}
-    </NavLink>
-  );
-};
-
-// --- Navbar Component ---
+// ------------------------------
+// NAVBAR COMPONENT
+// ------------------------------
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+
+  const isAdmin =
+    user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role);
 
   const handleLogout = () => {
     logout();
@@ -86,190 +93,172 @@ const Navbar = () => {
     { to: "/yourfiles", label: "Your Files", icon: Folder },
   ];
 
+  const adminLinks = isAdmin
+    ? [
+        { to: "/adminSettings", label: "Admin Settings", icon: Sliders },
+        { to: "/orglist", label: "Organizations", icon: Users },
+        { to: "/logs", label: "Logs", icon: FileText },
+      ]
+    : [];
+
   const authLinks = [{ to: "/login", label: "Login/Signup" }];
 
-  const adminLinks = [];
-  const isAdmin = user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role);
-
-  if (isAdmin) {
-    adminLinks.push(
-      { to: "/adminSettings", label: "Admin Settings", icon: Sliders },
-      { to: "/orglist", label: "Organizations", icon: Users },
-      { to: "/logs", label: "Logs", icon: FileText }
-    );
-  }
-
-  const activeClass = "bg-gray-100 text-gray-900 font-semibold";
-
   return (
-    <nav className="fixed top-0 w-full bg-white shadow-[0_2px_15px_rgba(0,0,0,0.08)] border-b border-gray-100 z-50 font-[Inter]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+    <nav className="fixed top-0 w-full bg-white border-b border-gray-200 shadow-sm z-50">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3">
+          <img
+            src={logo}
+            alt="logo"
+            className="h-10 w-10 rounded-full border border-gray-300"
+          />
+          <span
+            className="text-2xl font-bold"
+            style={{ fontFamily: "Orbitron, sans-serif", color: "#0A1A4F" }}
+          >
+            Crypterra
+          </span>
+        </Link>
 
-          {/* LOGO */}
-          <Link to="/" className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="Crypterra Logo"
-              className="h-10 w-10 rounded-full border border-gray-300 object-cover"
-            />
-
-            <span
-              className="text-2xl font-bold tracking-tight"
-              style={{
-                fontFamily: "Orbitron, sans-serif",
-                color: "#0A1A4F",
-                letterSpacing: "0.02em"
-              }}
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-2 p-1 bg-white rounded-full border border-gray-200">
+          {commonLinks.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-gray-600 hover:bg-gray-50"
             >
-              Crypterra
-            </span>
-          </Link>
+              <l.icon className="h-4 w-4" />
+              {l.label}
+            </NavLink>
+          ))}
 
-          {/* DESKTOP MENU */}
-          <div className="hidden md:flex items-center space-x-2 p-1 bg-white border border-gray-200 rounded-full shadow-inner-sm">
+          {token && (
+            <div className="flex items-center gap-1 ml-1">
+              {/* Admin Dropdown */}
+              {isAdmin && (
+                <DropdownMenu trigger={<Settings className="h-5 w-5" />}>
+                  <div className="px-4 py-1 text-xs font-semibold text-gray-400">
+                    Admin Tools
+                  </div>
+                  {adminLinks.map((a) => (
+                    <DropdownItem
+                      key={a.to}
+                      to={a.to}
+                      label={a.label}
+                      Icon={a.icon}
+                    />
+                  ))}
+                </DropdownMenu>
+              )}
 
-            {/* Common Links */}
-            {commonLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 text-sm font-medium transition-all rounded-full whitespace-nowrap ${
-                    isActive
-                      ? activeClass
-                      : "text-gray-600 hover:bg-gray-50 hover:text-black"
-                  }`
-                }
+              {/* User Dropdown */}
+              <DropdownMenu trigger={<User className="h-5 w-5" />}>
+                <div className="px-4 py-2 font-medium text-sm border-b">
+                  {user.email}
+                </div>
+                <div className="px-4 py-2 text-xs capitalize text-gray-500">
+                  {user.role}
+                </div>
+              </DropdownMenu>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-300 rounded-full hover:bg-red-50"
               >
-                <link.icon className="h-4 w-4 mr-2" />
-                {link.label}
+                <LogOut className="h-4 w-4" /> Logout
+              </button>
+            </div>
+          )}
+
+          {!token &&
+            authLinks.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className="px-4 py-2 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+              >
+                {l.label}
               </NavLink>
             ))}
-
-            {/* USER / ADMIN */}
-            {token && (
-              <div className="flex items-center space-x-1 ml-2 bg-white rounded-full">
-
-                {/* ADMIN SETTINGS DROPDOWN */}
-                {isAdmin && (
-                  <DropdownMenu trigger={<Settings className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
-                    <div className="block px-4 py-2 text-xs font-semibold text-gray-400">Admin Tools</div>
-                    {adminLinks.map(link => (
-                      <DropdownItem key={link.to} to={link.to} label={link.label} Icon={link.icon} />
-                    ))}
-                  </DropdownMenu>
-                )}
-
-                {/* USER DROPDOWN */}
-                <DropdownMenu trigger={<User className="h-5 w-5 text-gray-600 hover:text-gray-800" />}>
-                  {user && (
-                    <>
-                      <div className="block px-4 py-2 text-sm text-gray-900 font-medium truncate">{user.email}</div>
-                      <div className="block px-4 pb-2 text-xs text-gray-500 capitalize border-b border-gray-100">{user.role}</div>
-                    </>
-                  )}
-                </DropdownMenu>
-
-                {/* 🔴 REPLACED LAST ICON → LOGOUT BUTTON */}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center px-4 py-2 ml-2 rounded-full text-sm font-semibold text-red-600 border border-red-300 hover:bg-red-50 transition"
-                >
-                  <LogOut className="h-4 w-4 mr-2" /> Logout
-                </button>
-
-              </div>
-            )}
-
-            {/* LOGIN / SIGNUP */}
-            {!token &&
-              authLinks.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  className={({ isActive }) =>
-                    `px-4 py-2 text-sm font-medium transition-all rounded-full ${
-                      isActive
-                        ? "bg-indigo-600 text-white"
-                        : "text-indigo-600 hover:bg-indigo-50 border border-indigo-300"
-                    }`
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ))}
-          </div>
-
-          {/* MOBILE MENU BUTTON */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-gray-100"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6 text-black" /> : <Menu className="h-6 w-6 text-black" />}
-          </button>
-
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setMobileMenu((p) => !p)}
+        >
+          {mobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* Mobile Menu — FIXED VERSION */}
       <AnimatePresence>
-        {mobileMenuOpen && (
+        {mobileMenu && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
             transition={{ duration: 0.25 }}
-            className="md:hidden bg-white border-t border-gray-200"
+            className="md:hidden origin-top bg-white border-t border-gray-200"
           >
-            <div className="py-3 space-y-1">
-
-              {[...commonLinks, ...(token ? [] : authLinks)].map((link) => (
+            <div className="py-3 flex flex-col gap-1">
+              {commonLinks.map((l) => (
                 <NavLink
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    "flex items-center px-4 py-2 text-base transition " +
-                    (isActive ? "text-black font-semibold bg-gray-100" : "text-gray-700 hover:bg-gray-100")}
+                  key={l.to}
+                  to={l.to}
+                  onClick={() => setMobileMenu(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100"
                 >
-                  <link.icon className="mr-3 h-5 w-5" />
-                  {link.label}
+                  <l.icon className="h-5 w-5" />
+                  {l.label}
                 </NavLink>
               ))}
 
               {isAdmin && (
-                <div className="border-t border-gray-100 pt-2">
-                  <div className="px-4 py-2 text-sm font-semibold text-gray-500">Admin Tools</div>
-                  {adminLinks.map(link => (
+                <>
+                  <div className="px-4 py-2 text-sm text-gray-500 font-semibold">
+                    Admin Tools
+                  </div>
+                  {adminLinks.map((a) => (
                     <NavLink
-                      key={link.to}
-                      to={link.to}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        "flex items-center px-4 py-2 text-base transition " +
-                        (isActive ? "text-black font-semibold bg-gray-100" : "text-gray-700 hover:bg-gray-100")}
+                      key={a.to}
+                      to={a.to}
+                      onClick={() => setMobileMenu(false)}
+                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
                     >
-                      <link.icon className="mr-3 h-5 w-5" /> {link.label}
+                      <a.icon className="h-5 w-5" />
+                      {a.label}
                     </NavLink>
                   ))}
-                </div>
+                </>
               )}
 
-              {token && (
+              {token ? (
                 <button
                   onClick={handleLogout}
-                  className="flex items-center w-[90%] mx-auto mt-3 border border-red-300 py-2 rounded-full text-red-600 font-medium hover:bg-red-50 justify-center"
+                  className="flex items-center justify-center gap-2 w-[90%] mx-auto mt-3 px-4 py-2 rounded-full border border-red-300 text-red-600 hover:bg-red-50"
                 >
-                  <LogOut className="mr-2 h-5 w-5" /> Logout
+                  <LogOut className="h-5 w-5" /> Logout
                 </button>
+              ) : (
+                authLinks.map((l) => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    onClick={() => setMobileMenu(false)}
+                    className="px-4 py-2 text-indigo-600 text-center border border-indigo-300 rounded-full mx-4"
+                  >
+                    {l.label}
+                  </NavLink>
+                ))
               )}
-
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </nav>
   );
 };
