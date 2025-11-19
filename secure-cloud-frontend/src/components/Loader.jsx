@@ -13,25 +13,25 @@ const Loader = () => {
   const particles = Array.from({ length: 25 });
 
   return (
-    <div className="relative flex flex-col items-center justify-center h-screen w-full overflow-hidden bg-gradient-to-b from-black to-[#111]">
+    <div className="relative flex flex-col items-center justify-center h-screen w-full overflow-hidden bg-[#030b1a]">
 
-      {/* Subtle Ambient Glow */}
+      {/* Deeper Ambient Glow for Dark Mode */}
       <motion.div
         animate={{ ...float, rotate: [0, 6, -6, 0] }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[28rem] h-[28rem] bg-gradient-to-tr from-white/10 via-white/5 to-transparent rounded-full blur-3xl"
+        className="absolute w-[28rem] h-[28rem] bg-gradient-to-tr from-blue-200/10 via-blue-100/5 to-transparent rounded-full blur-3xl"
       />
       <motion.div
         animate={{ ...float, rotate: [-6, 6, -6] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[34rem] h-[34rem] bg-gradient-to-tr from-white/5 via-white/2 to-transparent rounded-full blur-[90px]"
+        className="absolute w-[34rem] h-[34rem] bg-gradient-to-tr from-blue-100/10 via-blue-50/5 to-transparent rounded-full blur-[90px]"
       />
 
-      {/* Floating Particles */}
+      {/* Floating Particles (Dim for Dark Mode) */}
       {particles.map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_6px_2px_rgba(255,255,255,0.5)]"
+          className="absolute w-1.5 h-1.5 bg-white/80 rounded-full shadow-[0_0_6px_2px_rgba(255,255,255,0.4)]"
           initial={{
             x: Math.random() * window.innerWidth - window.innerWidth / 2,
             y: Math.random() * window.innerHeight - window.innerHeight / 2,
@@ -39,7 +39,7 @@ const Loader = () => {
           }}
           animate={{
             y: ["100%", "-100%"],
-            opacity: [0, 0.7, 0],
+            opacity: [0, 0.55, 0],
           }}
           transition={{
             duration: 5 + Math.random() * 4,
@@ -52,9 +52,9 @@ const Loader = () => {
 
       {/* Logo with Premium Ring */}
       <div className="relative w-44 h-44 flex items-center justify-center mt-10">
-        {/* Rotating Ring */}
+        {/* Rotating Ring (Softened for Darker Background) */}
         <motion.div
-          className="absolute w-full h-full rounded-full border-[3px] border-t-white/60 border-b-white/20 opacity-40"
+          className="absolute w-full h-full rounded-full border-[3px] border-t-white/50 border-b-white/10 opacity-40"
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
         />
@@ -63,7 +63,7 @@ const Loader = () => {
         <motion.img
           src={logo}
           alt="Logo"
-          className="w-20 h-20 rounded-full shadow-[0_0_30px_4px_rgba(255,255,255,0.35)]"
+          className="w-20 h-20 rounded-full shadow-[0_0_28px_4px_rgba(255,255,255,0.3)]"
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1.2 }}
@@ -86,7 +86,7 @@ const Loader = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.6, delay: 0.3 }}
-        className="text-gray-400 mt-3 text-sm md:text-base tracking-[0.35em] uppercase"
+        className="text-blue-300/80 mt-3 text-sm md:text-base tracking-[0.35em] uppercase"
       >
         Securing your cloud...
       </motion.p>
