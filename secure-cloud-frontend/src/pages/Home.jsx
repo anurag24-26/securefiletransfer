@@ -4,9 +4,19 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
 import { motion } from "framer-motion";
-import { FaEdit, FaTimes, FaUserCircle, FaCheck, FaTimesCircle, FaUpload, FaFolder } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTimes,
+  FaUserCircle,
+  FaCheck,
+  FaTimesCircle,
+  FaUpload,
+  FaFolder,
+} from "react-icons/fa";
 
-// Premium Light Dashboard — Home.jsx
+// -------------------------------------------------------------
+// Premium Modern Dashboard — Home.jsx
+// -------------------------------------------------------------
 export default function Home() {
   const { user, token, logout, setUser } = useAuth();
   const navigate = useNavigate();
@@ -20,6 +30,9 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [updating, setUpdating] = useState(false);
 
+  // -------------------------------------------------------------
+  // Fetch User + Requests
+  // -------------------------------------------------------------
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -55,6 +68,9 @@ export default function Home() {
     fetchData();
   }, [token, setUser, logout, navigate]);
 
+  // -------------------------------------------------------------
+  // Approve / Reject Requests
+  // -------------------------------------------------------------
   const respondToRequest = async (id, action) => {
     try {
       const { data } = await api.post(
@@ -62,15 +78,21 @@ export default function Home() {
         { action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       alert(data.message);
+
       setAdminRequests((prev) => prev.filter((r) => r._id !== id));
       setMyRequests((prev) => prev.filter((r) => r._id !== id));
+
       if (action === "approve" && data.user) setUser(data.user);
     } catch (err) {
       alert(err?.response?.data?.message || "❌ Failed to respond. Try again.");
     }
   };
 
+  // -------------------------------------------------------------
+  // Handle Profile Update
+  // -------------------------------------------------------------
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
@@ -98,17 +120,22 @@ export default function Home() {
     }
   };
 
+  // -------------------------------------------------------------
+  // Page States
+  // -------------------------------------------------------------
   if (loading) return <Loader />;
 
   if (error)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-900 px-4">
-        <div className="max-w-lg w-full bg-white shadow-xl rounded-xl p-6 text-center border border-gray-100">
-          <h3 className="text-lg font-semibold mb-2">⚠️ Session Error</h3>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-sm w-full bg-white/70 backdrop-blur-xl shadow-2xl rounded-3xl p-6 border border-white/40 text-center">
+          <h3 className="text-lg font-semibold mb-2 text-slate-800">
+            ⚠️ Session Error
+          </h3>
           <p className="text-sm text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center justify-center px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-md shadow-lg hover:from-indigo-600 hover:to-purple-700 transition"
+            className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl shadow-md hover:from-indigo-600 hover:to-violet-700 transition"
           >
             🔄 Retry
           </button>
@@ -116,20 +143,26 @@ export default function Home() {
       </div>
     );
 
+  // -------------------------------------------------------------
+  // Main UI
+  // -------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 pt-10">
 
-          {/* Left column - Profile Card */}
+      <div className="max-w-7xl mx-auto px-4 pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+          {/* ---------------------------------------------------------
+             LEFT — Profile Card
+          --------------------------------------------------------- */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition"
+            className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40 p-7 hover:shadow-2xl transition-all"
           >
-            <div className="flex items-center gap-4">
-              <div className="h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 overflow-hidden border border-gray-200">
+            <div className="flex items-center gap-5">
+              <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-indigo-200 to-violet-200 overflow-hidden shadow-inner border border-white/40 flex items-center justify-center">
                 {user?.avatar ? (
                   <img
                     src={user.avatar}
@@ -137,131 +170,170 @@ export default function Home() {
                     className="object-cover h-full w-full"
                   />
                 ) : (
-                  <FaUserCircle className="text-gray-400 text-6xl" />
+                  <FaUserCircle className="text-gray-300 text-7xl" />
                 )}
               </div>
+
               <div className="flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-800">{user?.name} ✨</h2>
-                    <p className="text-sm text-gray-500">{user?.email}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-sm text-slate-700 border border-gray-100">
-                        {user?.role ?? '—'}
-                      </span>
-                      {user?.org?.name && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-white text-sm text-slate-600 border border-gray-100">
-                          🏢 {user.org.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsEditing(true)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl text-sm shadow-lg hover:from-indigo-600 hover:to-purple-700 transition"
-                    >
-                      <FaEdit /> Edit
-                    </motion.button>
-                  </div>
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-1">
+                  {user?.name} <span className="text-lg">✨</span>
+                </h2>
+                <p className="text-sm text-gray-500">{user?.email}</p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-white/40 text-xs">
+                    {user?.role ?? "—"}
+                  </span>
+
+                  {user?.org?.name && (
+                    <span className="px-3 py-1 rounded-full bg-white text-slate-600 border border-white/40 text-xs shadow-sm">
+                      🏢 {user.org.name}
+                    </span>
+                  )}
                 </div>
+              </div>
+
+              {/* EDIT BUTTON */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-sm rounded-xl shadow-md hover:shadow-lg"
+              >
+                <FaEdit /> Edit
+              </motion.button>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-7 grid grid-cols-2 gap-4">
+              <StatCard title="👥 Users" value={user?.orgTotalUsers ?? 0} />
+              <StatCard title="📁 Files" value={user?.orgTotalFiles ?? 0} />
+            </div>
+
+            {/* Storage Row */}
+            <div className="mt-8">
+              <h4 className="text-xs text-gray-500 mb-2">Storage Usage</h4>
+
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
+                  style={{
+                    width: `${
+                      user?.orgStorageLimit
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              ((user?.orgUsedStorage || 0) /
+                                user.orgStorageLimit) *
+                                100
+                            )
+                          )
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                <span>{formatBytes(user?.orgUsedStorage || 0)} used</span>
+                <span>
+                  {user?.orgStorageLimit
+                    ? formatBytes(
+                        Math.max(
+                          0,
+                          (user?.orgStorageLimit || 0) -
+                            (user?.orgUsedStorage || 0)
+                        )
+                      )
+                    : "—"}{" "}
+                  left
+                </span>
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <div className="bg-slate-50 border border-gray-100 rounded-xl p-3 text-center hover:bg-indigo-50 transition">
-                <div className="text-xs text-gray-500">👥 Users</div>
-                <div className="text-sm font-medium text-slate-800">{user?.orgTotalUsers ?? 0}</div>
-              </div>
-              <div className="bg-slate-50 border border-gray-100 rounded-xl p-3 text-center hover:bg-purple-50 transition">
-                <div className="text-xs text-gray-500">📁 Files</div>
-                <div className="text-sm font-medium text-slate-800">{user?.orgTotalFiles ?? 0}</div>
-              </div>
-            </div>
-
-            <div className="mt-6 text-sm text-gray-600">
-              <div className="flex items-center justify-between">
-                <span>Last Upload 📤</span>
-                <span className="font-medium text-slate-800 text-sm">{user?.lastUploadAt ? new Date(user.lastUploadAt).toLocaleString() : '—'}</span>
-              </div>
-              <div className="mt-3">
-                <span className="block text-xs text-gray-500 mb-1">Storage Usage</span>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${user?.orgStorageLimit ? Math.min(100, Math.round(((user?.orgUsedStorage || 0) / user.orgStorageLimit) * 100)) : 0}%`,
-                      background: 'linear-gradient(90deg,#6366f1,#8b5cf6)'
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                  <span>{formatBytes(user?.orgUsedStorage || 0)} used</span>
-                  <span>{user?.orgStorageLimit ? formatBytes(Math.max(0, (user?.orgStorageLimit || 0) - (user?.orgUsedStorage || 0))) : '—'} remaining</span>
-                </div>
-              </div>
-            </div>
-
+            {/* Org Path */}
             {user?.orgHierarchy?.length > 0 && (
-              <div className="mt-6">
-                <div className="text-xs text-gray-500 mb-2">Org Path 🌐</div>
+              <div className="mt-7">
+                <div className="text-xs text-gray-500 mb-1">Org Path 🌐</div>
                 <div className="flex flex-wrap gap-2">
                   {user.orgHierarchy.map((o, i) => (
-                    <span key={i} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-xs text-slate-700 hover:bg-indigo-50 transition">➡️ {o.name}</span>
+                    <span
+                      key={i}
+                      className="px-3 py-1 rounded-full bg-white/60 border border-white/40 text-xs text-slate-700 shadow-sm"
+                    >
+                      ➡️ {o.name}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
           </motion.div>
 
-          {/* Right column - Main content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Storage Card */}
+          {/* ---------------------------------------------------------
+             RIGHT — Main Section
+          --------------------------------------------------------- */}
+          <div className="lg:col-span-2 space-y-8">
+
+            {/* Storage Overview */}
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.05 }}
-              className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition"
+              transition={{ duration: 0.45 }}
+              className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40 p-7 hover:shadow-2xl transition"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-800">Organization Storage 💾</h3>
-                  <p className="text-sm text-gray-500">Overview of storage & usage</p>
+                  <h3 className="text-lg font-semibold text-slate-800">
+                    Organization Storage 💾
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Overview of usage and capacity
+                  </p>
                 </div>
-                <div className="text-sm text-gray-600">
+
+                <div className="text-right text-sm text-gray-600">
                   <div className="text-xs">Limit</div>
-                  <div className="font-medium text-slate-800">{user?.orgStorageLimit ? formatBytes(user.orgStorageLimit) : '5 GB'}</div>
+                  <div className="font-semibold text-slate-800">
+                    {user?.orgStorageLimit
+                      ? formatBytes(user.orgStorageLimit)
+                      : "5 GB"}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl bg-indigo-50 p-4 border border-gray-100 hover:shadow-lg transition">
-                  <div className="text-xs text-gray-500">📁 Total Files</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-800">{user?.orgTotalFiles ?? 0}</div>
-                </div>
-                <div className="rounded-xl bg-purple-50 p-4 border border-gray-100 hover:shadow-lg transition">
-                  <div className="text-xs text-gray-500">⬆️ Your Upload</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-800">{formatBytes(user?.totalUploadSize || 0)}</div>
-                </div>
-                <div className="rounded-xl bg-teal-50 p-4 border border-gray-100 hover:shadow-lg transition">
-                  <div className="text-xs text-gray-500">⚡ Usage %</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-800">{user?.orgStorageLimit ? Math.min(100, Math.round(((user?.orgUsedStorage || 0) / user.orgStorageLimit) * 100)) : 0}%</div>
-                </div>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <InfoCard label="📁 Total Files" value={user?.orgTotalFiles ?? 0} color="from-indigo-100 to-indigo-200" />
+                <InfoCard label="⬆️ Your Uploads" value={formatBytes(user?.totalUploadSize || 0)} color="from-violet-100 to-violet-200" />
+                <InfoCard
+                  label="⚡ Usage %"
+                  value={
+                    user?.orgStorageLimit
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            ((user?.orgUsedStorage || 0) /
+                              user.orgStorageLimit) *
+                              100
+                          )
+                        )
+                      : 0
+                  }
+                  color="from-teal-100 to-teal-200"
+                />
               </div>
             </motion.div>
 
-            {/* Requests Section */}
-            <div className="grid grid-cols-1 gap-6">
-              {(["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role) && adminRequests.length > 0) && (
-                <RequestSection
-                  title="Pending Admin Requests 📝"
-                  color="slate"
-                  requests={adminRequests}
-                  respondToRequest={respondToRequest}
-                />
-              )}
+            {/* Requests */}
+            <div className="space-y-6">
+              {["superAdmin", "orgAdmin", "deptAdmin"].includes(user?.role) &&
+                adminRequests.length > 0 && (
+                  <RequestSection
+                    title="Pending Admin Requests 📝"
+                    color="slate"
+                    requests={adminRequests}
+                    respondToRequest={respondToRequest}
+                  />
+                )}
 
               {myRequests.length > 0 && (
                 <RequestSection
@@ -273,9 +345,11 @@ export default function Home() {
               )}
 
               {adminRequests.length === 0 && myRequests.length === 0 && (
-                <div className="bg-white rounded-3xl border border-gray-100 p-6 text-center text-gray-600 hover:shadow-lg transition">
-                  <h4 className="text-lg font-medium text-slate-800">🎉 No pending requests</h4>
-                  <p className="text-sm mt-2">You're all caught up!</p>
+                <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/40 shadow p-6 text-center text-gray-600">
+                  <h4 className="text-lg font-medium text-slate-800">
+                    🎉 No pending requests
+                  </h4>
+                  <p className="text-sm mt-1">You're all caught up!</p>
                 </div>
               )}
             </div>
@@ -283,61 +357,87 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* ---------------------------------------------------------
+         EDIT PROFILE MODAL
+      --------------------------------------------------------- */}
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsEditing(false)} />
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setIsEditing(false)}
+          />
+
           <motion.form
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
             onSubmit={handleProfileUpdate}
-            className="relative z-10 w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-gray-100 p-6"
+            className="relative z-10 w-full max-w-2xl bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl shadow-xl p-7"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-slate-800">Edit Profile ✏️</h3>
-                <p className="text-sm text-gray-500 mt-1">Update your name or avatar</p>
+                <h3 className="text-lg font-semibold text-slate-800">
+                  Edit Profile ✏️
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Update your name or photo
+                </p>
               </div>
-              <button type="button" onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600">
-                <FaTimesCircle className="text-2xl"/>
+
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FaTimesCircle className="text-3xl" />
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Name</label>
+                <label className="text-xs text-gray-500">Name</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder={user?.name}
-                  className="w-full px-3 py-2 border border-gray-100 rounded-xl bg-gray-50 text-slate-800 outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  className="w-full mt-1 px-3 py-2 border border-white/40 bg-white/60 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Avatar</label>
+                <label className="text-xs text-gray-500">Avatar</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setSelectedFile(e.target.files[0])}
-                  className="w-full text-sm text-gray-600"
+                  className="w-full mt-1 text-sm text-gray-600"
                 />
-                {selectedFile && <p className="mt-2 text-xs text-gray-600">{selectedFile.name}</p>}
+                {selectedFile && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {selectedFile.name}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 rounded-xl text-sm border border-gray-100">Cancel</button>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 rounded-xl text-sm border border-white/40 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.97 }}
                 type="submit"
                 disabled={updating}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm shadow-lg transition"
+                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl shadow-md"
               >
-                {updating ? 'Updating...' : (<><FaCheck /> Save</>)}
+                {updating ? "Updating..." : <><FaCheck /> Save</>}
               </motion.button>
             </div>
           </motion.form>
@@ -347,7 +447,7 @@ export default function Home() {
   );
 
   function formatBytes(bytes = 0) {
-    if (!bytes || bytes === 0) return "0 B";
+    if (!bytes) return "0 B";
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -355,37 +455,102 @@ export default function Home() {
   }
 }
 
-// RequestSection component
-export function RequestSection({ title, color = 'slate', requests = [], respondToRequest = () => {} }) {
-  const accent = color === 'teal' ? 'text-teal-600' : 'text-slate-700';
+// -------------------------------------------------------------
+// MINI COMPONENTS
+// -------------------------------------------------------------
+function StatCard({ title, value }) {
+  return (
+    <div className="bg-white/60 border border-white/40 p-4 rounded-2xl shadow-sm hover:shadow-md transition text-center">
+      <div className="text-xs text-gray-500">{title}</div>
+      <div className="text-xl font-semibold text-slate-800 mt-1">{value}</div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value, color }) {
+  return (
+    <div
+      className={`p-4 rounded-xl shadow-sm border border-white/50 bg-gradient-to-br ${color} hover:shadow-lg transition`}
+    >
+      <div className="text-xs text-gray-600">{label}</div>
+      <div className="mt-2 text-lg font-semibold text-slate-800">{value}</div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Requests Section
+// -------------------------------------------------------------
+export function RequestSection({
+  title,
+  color = "slate",
+  requests = [],
+  respondToRequest = () => {},
+}) {
+  const accent =
+    color === "teal" ? "text-teal-700" : "text-slate-700";
 
   return (
-    <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="bg-white rounded-3xl border border-gray-100 p-6 shadow hover:shadow-xl transition">
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl border border-white/40 p-6 hover:shadow-2xl transition"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-lg font-semibold ${accent}`}>{title}</h3>
-        <span className="text-sm text-gray-500">{requests.length} pending</span>
+        <span className="text-sm text-gray-500">
+          {requests.length} pending
+        </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {requests.map((r) => (
-          <div key={r._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-50 border border-gray-100 rounded-xl p-4 hover:bg-white transition shadow-sm">
-            <div className="flex-1 w-full">
-              <div className="flex items-center justify-between gap-3">
+          <div
+            key={r._id}
+            className="p-4 bg-white/60 backdrop-blur-md border border-white/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-white/80 transition shadow-sm"
+          >
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium text-slate-800">{r.sender?.name} ✨</div>
+                  <div className="text-sm font-medium text-slate-800">
+                    {r.sender?.name} ✨
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    <span className="capitalize">{r.type}</span> request for <span className="font-medium text-slate-700">{r.orgId?.name || r.departmentId?.name}</span>
+                    {r.type} request for{" "}
+                    <span className="font-medium">
+                      {r.orgId?.name || r.departmentId?.name}
+                    </span>
                   </div>
                 </div>
-                <div className="hidden sm:block text-xs text-gray-500">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</div>
+
+                <div className="hidden sm:block text-xs text-gray-500">
+                  {r.createdAt &&
+                    new Date(r.createdAt).toLocaleString()}
+                </div>
               </div>
 
-              {r.message && <div className="mt-2 text-xs text-gray-600 italic">💬 {r.message}</div>}
+              {r.message && (
+                <div className="mt-2 text-xs text-gray-600 italic">
+                  💬 {r.message}
+                </div>
+              )}
             </div>
 
-            <div className="flex-shrink-0 flex items-center gap-2 mt-2 sm:mt-0">
-              <button onClick={() => respondToRequest(r._id, 'approve')} className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-2xl text-sm hover:bg-teal-500 transition"><FaCheck /> Accept</button>
-              <button onClick={() => respondToRequest(r._id, 'reject')} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-slate-700 rounded-2xl text-sm hover:bg-gray-50 transition"><FaTimes /> Reject</button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => respondToRequest(r._id, "approve")}
+                className="px-3 py-1.5 bg-teal-600 text-white rounded-xl text-sm hover:bg-teal-500 transition inline-flex items-center gap-1"
+              >
+                <FaCheck /> Accept
+              </button>
+
+              <button
+                onClick={() => respondToRequest(r._id, "reject")}
+                className="px-3 py-1.5 bg-white/70 border border-white/40 text-slate-700 rounded-xl text-sm hover:bg-gray-50 transition inline-flex items-center gap-1"
+              >
+                <FaTimes /> Reject
+              </button>
             </div>
           </div>
         ))}
