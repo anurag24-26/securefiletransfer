@@ -1,154 +1,288 @@
-// Navbar.jsx — with smooth mobile animation and refined responsiveness
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "../assets/logo.jpg";
 
+import {
+  Menu,
+  X,
+  Settings,
+  LogOut,
+  User,
+  Users,
+  Sliders,
+  FileText,
+  Home,
+  Briefcase,
+  FolderOpen,   // ✅ FIXED: replaced Folder → FolderOpen
+} from "lucide-react";
+
+// ------------------------------
+// SAFE DROPDOWN FOR MOBILE
+// ------------------------------
+const DropdownMenu = ({ children, trigger }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="p-2 rounded-full hover:bg-white/30 backdrop-blur-sm transition"
+      >
+        {trigger}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            className="absolute right-0 mt-3 w-48 
+              bg-white/60 backdrop-blur-xl border border-white/30 
+              shadow-lg rounded-xl z-50"
+          >
+            <div className="py-1">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const DropdownItem = ({ to, label, Icon }) => (
+  <NavLink
+    to={to}
+    className="flex items-center px-4 py-2 text-sm hover:bg-white/40 transition rounded-md"
+  >
+    <Icon className="mr-3 h-4 w-4" />
+    {label}
+  </NavLink>
+);
+
+// ------------------------------
+// NAVBAR COMPONENT
+// ------------------------------
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+
+  const isAdmin =
+    user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // FIXED: Folder → FolderOpen
   const commonLinks = [
-    { to: "/", label: "Home" },
-    { to: "/myOrganization", label: "My Organization" },
-    { to: "/yourfiles", label: "Your Files" },
+    { to: "/", label: "Home", icon: Home },
+    { to: "/myOrganization", label: "My Organization", icon: Briefcase },
+    { to: "/yourfiles", label: "Your Files", icon: FolderOpen },
   ];
+
+  const adminLinks = isAdmin
+    ? [
+      { to: "/adminSettings", label: "Admin Settings", icon: Sliders },
+      { to: "/orglist", label: "Organizations", icon: Users },
+      { to: "/logs", label: "Logs", icon: FileText },
+    ]
+    : [];
 
   const authLinks = [{ to: "/login", label: "Login/Signup" }];
 
-  const userLinks = [];
-  if (user && ["superAdmin", "orgAdmin", "deptAdmin"].includes(user.role)) {
-    userLinks.push(
-      { to: "/adminSettings", label: "Admin Settings" },
-      { to: "/orglist", label: "Organizations" }
-    );
-  }
-
-  const activeClass =
-    "relative text-indigo-500 font-semibold after:content-[''] after:absolute after:w-full after:h-[2px] after:bg-gradient-to-r after:from-indigo-400 after:to-blue-400 after:bottom-[-4px] after:left-0 drop-shadow-[0_0_8px_rgba(99,102,241,0.7)] transition-all duration-300";
-
   return (
-    <nav className="fixed top-0 w-full bg-white/30 backdrop-blur-xl shadow-lg border-b border-indigo-200/30 z-50 font-[Poppins]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Logo & Brand */}
-          <Link
-            to="/"
-            className="flex items-center space-x-3 hover:scale-105 transition-transform duration-300"
+    <nav
+      className="fixed top-0 w-full z-50 
+      bg-white/50 backdrop-blur-xl 
+      border-b border-white/30 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+    >
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3">
+          <img
+            src={logo}
+            alt="logo"
+            className="h-10 w-10 rounded-full border border-white/50 shadow-sm"
+          />
+          <span
+            className="text-2xl font-bold"
+            style={{ fontFamily: "Orbitron, sans-serif", color: "#0A1A4F" }}
           >
-            <img
-              src={logo}
-              alt="Crypterra Logo"
-              className="h-10 w-10 rounded-full border border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.5)]"
-            />
-            <span className="text-2xl font-extrabold tracking-wide text-indigo-700 drop-shadow-[0_0_12px_rgba(99,102,241,0.7)] hover:drop-shadow-[0_0_20px_rgba(99,102,241,0.9)] transition-all duration-300 font-[Orbitron]">
-              Crypterra
-            </span>
-          </Link>
+            Crypterra
+          </span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-8 items-center">
-            {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  "relative inline-flex items-center px-1 pt-1 text-[15px] font-medium tracking-wide transition-all duration-300 " +
-                  (isActive
-                    ? activeClass
-                    : "text-gray-600 hover:text-indigo-500 after:content-[''] after:absolute after:w-0 after:h-[2px] after:bg-gradient-to-r after:from-indigo-400 after:to-blue-400 after:bottom-[-4px] after:left-0 hover:after:w-full after:transition-all after:duration-300")
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+        {/* Desktop Menu */}
+        <div
+          className="hidden md:flex items-center gap-2 p-1 
+          bg-white/40 backdrop-blur-xl 
+          rounded-full border border-white/30 shadow-sm"
+        >
+          {commonLinks.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className="flex items-center gap-2 px-4 py-2 rounded-full
+              hover:bg-white/60 transition"
+              style={{
+                color: "#0A1A4F",
+                fontWeight: 600,
+              }}
+            >
+              <l.icon className="h-4 w-4" style={{ color: "#0A1A4F" }} />
+              {l.label}
+            </NavLink>
+          ))}
 
-            {token && (
+          {token && (
+            <div className="flex items-center gap-1 ml-1">
+              {/* Admin Dropdown */}
+              {isAdmin && (
+                <DropdownMenu trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />}>
+                  <div className="px-4 py-1 text-xs font-semibold text-gray-600">
+                    Admin Tools
+                  </div>
+                  {adminLinks.map((a) => (
+                    <DropdownItem
+                      key={a.to}
+                      to={a.to}
+                      label={a.label}
+                      Icon={a.icon}
+                    />
+                  ))}
+                </DropdownMenu>
+              )}
+
+              {/* User Dropdown */}
+              <DropdownMenu trigger={<User className="h-5 w-5 text-[#0A1A4F]" />}>
+                <div className="px-4 py-2 font-medium text-sm border-b border-white/40">
+                  {user.email}
+                </div>
+                <div className="px-4 py-2 text-xs capitalize text-gray-600">
+                  {user.role}
+                </div>
+              </DropdownMenu>
+
+              {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="ml-4 bg-gradient-to-r from-indigo-500 to-blue-500 text-white px-5 py-2 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2
+                text-red-600 border border-red-300 rounded-full
+                hover:bg-red-50 transition"
               >
-                Logout
+                <LogOut className="h-4 w-4" /> Logout
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Mobile Hamburger */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-indigo-500 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all duration-300"
-            >
-              {mobileMenuOpen ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
+          {!token &&
+            authLinks.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className="px-4 py-2 rounded-full 
+                border border-indigo-300 text-indigo-600 
+                hover:bg-indigo-50 transition"
+              >
+                {l.label}
+              </NavLink>
+            ))}
         </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setMobileMenu((p) => !p)}
+        >
+          {mobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
 
-      {/* Smooth Animated Mobile Dropdown */}
+      {/* Mobile Menu */}
       <AnimatePresence>
-        {mobileMenuOpen && (
+        {mobileMenu && (
           <motion.div
-            key="mobile-menu"
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="md:hidden bg-white/40 backdrop-blur-lg shadow-inner border-t border-indigo-200/30"
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
+            transition={{ duration: 0.25 }}
+            className="md:hidden origin-top
+            bg-white/50 backdrop-blur-xl border-t border-white/30"
           >
-            <div className="pt-2 pb-3 space-y-1">
-              {[...commonLinks, ...(token ? userLinks : authLinks)].map((link) => (
+            <div className="py-3 flex flex-col gap-1">
+              {commonLinks.map((l) => (
                 <NavLink
-                  key={link.to}
-                  to={link.to}
-                  className={({ isActive }) =>
-                    "block pl-4 pr-4 py-2 border-l-4 text-base font-medium tracking-wide transition-all duration-200 " +
-                    (isActive
-                      ? "bg-white/30 border-indigo-400 text-indigo-600 shadow-[inset_0_0_12px_rgba(99,102,241,0.3)]"
-                      : "border-transparent text-gray-600 hover:border-indigo-400 hover:bg-white/20 hover:text-indigo-500")
-                  }
-                  onClick={() => setMobileMenuOpen(false)}
+                  key={l.to}
+                  to={l.to}
+                  onClick={() => setMobileMenu(false)}
+                  className="flex items-center gap-3 px-4 py-2 
+                  hover:bg-white/40 transition rounded-md"
+                  style={{ color: "#0A1A4F", fontWeight: 600 }}
                 >
-                  {link.label}
+                  <l.icon className="h-5 w-5" />
+                  {l.label}
                 </NavLink>
               ))}
 
-              {token && (
+              {isAdmin && (
+                <>
+                  <div className="px-4 py-2 text-sm text-gray-600 font-semibold">
+                    Admin Tools
+                  </div>
+
+                  {adminLinks.map((a) => (
+                    <NavLink
+                      key={a.to}
+                      to={a.to}
+                      onClick={() => setMobileMenu(false)}
+                      className="flex items-center gap-3 px-4 py-2 
+                      hover:bg-white/40 transition rounded-md"
+                    >
+                      <a.icon className="h-5 w-5" />
+                      {a.label}
+                    </NavLink>
+                  ))}
+                </>
+              )}
+
+              {token ? (
                 <button
                   onClick={handleLogout}
-                  className="w-[90%] mx-auto block mt-3 text-center bg-gradient-to-r from-indigo-500 to-blue-500 text-white py-2 rounded-2xl font-semibold hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  className="flex items-center justify-center gap-2 w-[90%] mx-auto mt-3 px-4 py-2 
+                  rounded-full border border-red-300 text-red-600 
+                  hover:bg-red-50 transition"
                 >
-                  Logout
+                  <LogOut className="h-5 w-5" /> Logout
                 </button>
+              ) : (
+                authLinks.map((l) => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    onClick={() => setMobileMenu(false)}
+                    className="px-4 py-2 text-indigo-600 text-center 
+                    border border-indigo-300 rounded-full mx-4 
+                    hover:bg-indigo-50 transition"
+                  >
+                    {l.label}
+                  </NavLink>
+                ))
               )}
             </div>
           </motion.div>
