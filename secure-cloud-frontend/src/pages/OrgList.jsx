@@ -324,12 +324,9 @@ const OrgList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 p-8">
+     
           <Loader size="lg" />
-          <p className="text-md font-medium text-slate-600">Loading data and preparing admin console…</p>
-        </div>
-      </div>
+         
     );
   }
 
@@ -546,7 +543,7 @@ const OrgList = () => {
           >
             {userLoading ? (
               <div className="flex items-center gap-3 text-slate-600 py-6">
-                <Loader />
+                
                 <span className="text-sm">Fetching member list…</span>
               </div>
             ) : userError ? (

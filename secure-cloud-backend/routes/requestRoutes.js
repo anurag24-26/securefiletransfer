@@ -84,6 +84,7 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 /* --------------------- Fetch Pending Requests (Admins) --------------------- */
+/* --------------------- Fetch Pending Requests (Admins) --------------------- */
 router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.userId);
@@ -97,8 +98,12 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
     }
 
     const requests = await Request.find({
-      $or: [{ orgId: { $in: orgIds } }, { departmentId: { $in: orgIds } }],
+      $or: [
+        { orgId: { $in: orgIds } },
+        { departmentId: { $in: orgIds } }
+      ],
       status: "pending",
+      sender: { $ne: currentUser._id }  // 🔥 FIX: Don't show your own requests
     })
       .populate("sender", "name email role")
       .populate("targetUser", "name email role")
@@ -112,91 +117,129 @@ router.get("/", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAd
   }
 });
 
+
+/* --------------------- Approve / Reject Request --------------------- */
 /* --------------------- Approve / Reject Request --------------------- */
 router.post("/:id/action", authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action } = req.body;
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
 
-    if (!["approve", "reject"].includes(action))
-      return res.status(400).json({ message: "Invalid action" });
+    if (!["approve", "reject"].includes(action))
+      return res.status(400).json({ message: "Invalid action" });
 
-    const request = await Request.findById(id);
-    if (!request) return res.status(404).json({ message: "Request not found" });
+    const request = await Request.findById(id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
 
-    const currentUser = await User.findById(req.user.userId);
-    if (!currentUser) return res.status(404).json({ message: "Current user not found" });
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser)
+      return res.status(404).json({ message: "Current user not found" });
 
-    // PERMISSION LOGIC
-    let allowed = false;
-    // 1. Check if admin over org/dept branch
-    if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
-      let orgIds = [];
-      if (currentUser.role === "superAdmin") {
-        orgIds = (await Organization.find()).map((o) => o._id.toString());
-      } else if (currentUser.orgId) {
-        orgIds = await getAllOrgIds(currentUser.orgId);
-        orgIds = orgIds.map((id) => id.toString());
-      }
-      const reqOrg = request.orgId ? request.orgId.toString() : null;
-      const reqDept = request.departmentId ? request.departmentId.toString() : null;
-      if ((reqOrg && orgIds.includes(reqOrg)) || (reqDept && orgIds.includes(reqDept)))
-        allowed = true;
-    }
-    // 2. Check if user is the actual invitee/target
-    if (
-      (request.targetUser && request.targetUser.toString() === currentUser._id.toString()) ||
-      (request.email && request.email === currentUser.email)
-    ) {
-      allowed = true;
-    }
-    if (!allowed)
-      return res.status(403).json({ message: "Forbidden: You are not allowed to manage this request" });
+    /* ----------------- PERMISSION CHECK ------------------- */
+/* ----------------- PERMISSION CHECK ------------------- */
+let allowed = false;
 
-    // -------- PROCESS REQUEST ---------
-    if (action === "reject") {
-      request.status = "rejected";
-      request.processedAt = new Date();
-      await request.save();
-      return res.json({ message: "Request rejected" });
-    }
+// --- Admin hierarchy permission ---
+if (["superAdmin", "orgAdmin", "deptAdmin"].includes(currentUser.role)) {
+  let orgIds = [];
 
-    // Approve request (only for properly permitted user)
-    if (request.type === "admin") {
-      const target = await User.findById(request.targetUser);
-      if (!target) return res.status(404).json({ message: "Target user not found" });
-      target.role = "deptAdmin";
-      target.orgId = request.departmentId;
-      await target.save();
-    } else if (request.type === "join") {
-      let user = await User.findOne({ email: request.email });
-      if (user) {
-        user.orgId = request.orgId;
-        user.role = request.requestedRole;
-      } else {
-        user = new User({
-          email: request.email,
-          orgId: request.orgId,
-          role: request.requestedRole,
-        });
-      }
-      await user.save();
-    } else if (request.type === "roleChange") {
-      const target = await User.findById(request.targetUser);
-      if (!target) return res.status(404).json({ message: "Target user not found" });
-      target.role = request.requestedRole;
-      await target.save();
-    }
+  if (currentUser.role === "superAdmin") {
+    orgIds = (await Organization.find()).map((o) => o._id.toString());
+  } else if (currentUser.orgId) {
+    orgIds = (await getAllOrgIds(currentUser.orgId)).map(id => id.toString());
+  }
 
-    request.status = "approved";
-    request.processedAt = new Date();
-    await request.save();
-    res.json({ message: "Request processed", request });
-  } catch (error) {
-    console.error("Action request error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+  const reqOrg = request.orgId?.toString();
+  const reqDept = request.departmentId?.toString();
+
+  if (
+    (reqOrg && orgIds.includes(reqOrg)) ||
+    (reqDept && orgIds.includes(reqDept)) ||
+    (reqDept && currentUser.orgId?.toString() === reqDept)
+  ) {
+    allowed = true;
+  }
+}
+
+// --- Target user can accept JOIN requests ---
+if (request.type === "join") {
+  if (
+    (request.targetUser && request.targetUser.toString() === currentUser._id.toString()) ||
+    (request.email && request.email.toLowerCase() === currentUser.email.toLowerCase())
+  ) {
+    allowed = true;
+  }
+}
+
+// --- Target user can accept ADMIN or ROLECHANGE requests ---
+if (["admin", "roleChange"].includes(request.type)) {
+  if (request.targetUser?.toString() === currentUser._id.toString()) {
+    allowed = true;
+  }
+}
+
+// --- Sender cannot approve their own request ---
+if (request.sender.toString() === currentUser._id.toString()) {
+  return res.status(403).json({ message: "You cannot approve your own request" });
+}
+
+if (!allowed) {
+  return res.status(403).json({
+    message: "Forbidden: You are not allowed to manage this request"
+  });
+}
+
+
+    /* ----------------- REJECT ------------------ */
+    if (action === "reject") {
+      request.status = "rejected";
+      request.processedAt = new Date();
+      await request.save();
+      return res.json({ message: "Request rejected" });
+    }
+
+    /* ----------------- APPROVE ------------------ */
+    if (request.type === "admin") {
+      const target = await User.findById(request.targetUser);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+
+      target.role = "deptAdmin";
+      target.orgId = request.departmentId;
+      await target.save();
+    } else if (request.type === "join") {
+      let user = await User.findOne({ email: request.email });
+
+      if (user) {
+        user.orgId = request.orgId;
+        user.role = request.requestedRole;
+      } else {
+        user = new User({
+          email: request.email,
+          orgId: request.orgId,
+          role: request.requestedRole,
+        });
+      }
+
+      await user.save();
+    } else if (request.type === "roleChange") {
+      const target = await User.findById(request.targetUser);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+
+      target.role = request.requestedRole;
+      await target.save();
+    }
+
+    request.status = "approved";
+    request.processedAt = new Date();
+    await request.save();
+
+    res.json({ message: "Request processed", request });
+  } catch (error) {
+    console.error("Action request error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
+
 
 /* --------------------- Get All Users under Admin’s Org --------------------- */
 router.get("/users/list", authMiddleware, authorizeRoles("superAdmin", "orgAdmin", "deptAdmin"), async (req, res) => {
