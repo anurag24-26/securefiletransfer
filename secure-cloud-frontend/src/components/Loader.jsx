@@ -88,7 +88,7 @@ const Loader = () => {
         transition={{ duration: 1.6, delay: 0.3 }}
         className="text-blue-300/80 mt-3 text-sm md:text-base tracking-[0.35em] uppercase"
       >
-        Securing your cloud....
+        Securing your cloud...
       </motion.p>
     </div>
   );
