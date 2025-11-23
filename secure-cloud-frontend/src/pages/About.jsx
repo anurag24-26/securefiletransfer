@@ -5,83 +5,107 @@ import { HiCheckCircle } from "react-icons/hi";
 
 const About = () => {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 px-4 py-8 md:px-10">
+        <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 text-gray-800">
 
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="max-w-3xl mx-auto backdrop-blur-xl bg-white/70 p-6 md:p-10 rounded-2xl shadow-lg border border-white/40"
-            >
-                {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
+            {/* HERO SECTION */}
+            <section className="text-center px-6 md:px-12 pt-12 md:pt-16 pb-12">
+                
+                {/* Floating Logo */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.7 }}
+                    className="flex justify-center"
+                >
                     <motion.img
                         src={Logo}
                         alt="Crypterra Logo"
-                        className="w-16 h-16 rounded-full shadow-md ring-2 ring-white"
-                        initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
+                        className="w-28 h-28 md:w-36 md:h-36 rounded-2xl shadow-xl ring-4 ring-white/70 object-cover"
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 4, repeat: Infinity }}
                     />
+                </motion.div>
 
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
-                            About Crypterra
-                        </h1>
-                        <p className="text-gray-600 text-sm md:text-base">
-                            Secure Cloud Storage • Encryption • Access Control
-                        </p>
-                    </div>
-                </div>
+                {/* Obitron Title */}
+                <motion.h1
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-4xl md:text-5xl font-bold mt-6"
+                    style={{ fontFamily: "Orbitron, sans-serif" }}
+                >
+                    Crypterra
+                </motion.h1>
 
-                {/* Content */}
+                <motion.p
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-gray-600 mt-3 text-sm md:text-lg max-w-2xl mx-auto"
+                >
+                    Secure cloud storage with encryption, access control, version tracking,
+                    and full transparency.
+                </motion.p>
+            </section>
+
+            {/* CONTENT CARD */}
+            <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="max-w-3xl mx-auto bg-white/80 backdrop-blur-lg p-6 md:p-10 rounded-2xl shadow-xl border border-white/50"
+            >
+                {/* INTRO */}
                 <p className="text-gray-700 leading-relaxed mb-4 text-sm md:text-base">
-                    Crypterra is a secure cloud storage platform designed to protect sensitive
-                    data using <span className="font-semibold">advanced encryption techniques</span> and
-                    <span className="font-semibold"> multi-level access control</span>. Our goal is to ensure
-                    users can store, share, and collaborate without compromising privacy.
+                    Crypterra is a secure cloud storage platform built with advanced encryption
+                    and <span className="font-semibold">multi-level access control</span>. It allows users to store,
+                    collaborate, and share while ensuring total privacy.
                 </p>
 
                 <p className="text-gray-700 leading-relaxed mb-6 text-sm md:text-base">
-                    Built for academic institutions, researchers, and organizations — Crypterra ensures
-                    only authorized users can access files. All activities are tracked with
-                    transparent audit logs and version management.
+                    Designed for institutions, researchers, and organizations, Crypterra ensures
+                    transparency, protected access, and complete activity tracking.
                 </p>
 
-                {/* Features */}
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Key Features</h2>
-                <ul className="space-y-3 mb-8">
+                {/* FEATURES */}
+                <h2 className="text-2xl font-semibold text-gray-900 mb-5">Key Features</h2>
+
+                <ul className="space-y-4 mb-10">
                     {[
-                        "End-to-end encryption for secure data protection",
+                        "End-to-end encryption for full data protection",
                         "Role-based access control (RBAC)",
-                        "Version tracking & activity logs",
-                        "Fast and reliable cloud backend",
-                        "User-friendly interface for smooth collaboration",
+                        "Activity logs & version tracking",
+                        "Fast and scalable cloud backend",
+                        "Clean & modern user interface",
                     ].map((item, index) => (
                         <motion.li
                             key={index}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className="flex items-center gap-2 text-gray-700"
+                            className="flex items-center gap-3 text-gray-700"
                         >
                             <HiCheckCircle className="text-green-600 text-xl" />
-                            <span className="text-sm md:text-base">{item}</span>
+                            <span>{item}</span>
                         </motion.li>
                     ))}
                 </ul>
 
-                {/* Mission */}
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Our Mission</h2>
-                <p className="text-gray-700 leading-relaxed mb-6 text-sm md:text-base">
-                    Our mission is to make cloud collaboration secure, transparent, and 
-                    trustworthy. In a digital world full of breaches, Crypterra gives users complete 
-                    control over their information.
+                {/* MISSION */}
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">Our Mission</h2>
+                <p className="text-gray-700 leading-relaxed mb-6">
+                    Our mission is to make cloud collaboration secure, transparent, and effortless.
+                    Crypterra gives users complete control over their data in a world filled with rising
+                    digital threats.
                 </p>
 
-                {/* Footer */}
-                <p className="text-gray-500 text-xs md:text-sm text-center mt-6">
+                <p className="text-gray-500 text-center text-sm mt-6">
                     Thank you for choosing Crypterra — your data, secured the right way.
                 </p>
             </motion.div>
+
+            <div className="h-10"></div>
         </div>
     );
 };
