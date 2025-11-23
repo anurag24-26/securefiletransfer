@@ -1,3 +1,4 @@
+// Navbar.jsx — Fully Fixed & Optimized
 import React, { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -15,16 +16,17 @@ import {
   FileText,
   Home,
   Briefcase,
-  FolderOpen,   // ✅ FIXED: replaced Folder → FolderOpen
+  FolderOpen,
 } from "lucide-react";
 
-// ------------------------------
-// SAFE DROPDOWN FOR MOBILE
-// ------------------------------
+// ------------------------------------
+// SAFE DROPDOWN
+// ------------------------------------
 const DropdownMenu = ({ children, trigger }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  // Click outside to close
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -38,7 +40,7 @@ const DropdownMenu = ({ children, trigger }) => {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => setOpen((prev) => !prev)}
         className="p-2 rounded-full hover:bg-white/30 backdrop-blur-sm transition"
       >
         {trigger}
@@ -50,8 +52,8 @@ const DropdownMenu = ({ children, trigger }) => {
             initial={{ opacity: 0, scale: 0.9, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -4 }}
-            className="absolute right-0 mt-3 w-48 
-              bg-white/60 backdrop-blur-xl border border-white/30 
+            className="absolute right-0 mt-3 w-48
+              bg-white/60 backdrop-blur-xl border border-white/30
               shadow-lg rounded-xl z-50"
           >
             <div className="py-1">{children}</div>
@@ -62,6 +64,7 @@ const DropdownMenu = ({ children, trigger }) => {
   );
 };
 
+// Single dropdown item
 const DropdownItem = ({ to, label, Icon }) => (
   <NavLink
     to={to}
@@ -72,12 +75,13 @@ const DropdownItem = ({ to, label, Icon }) => (
   </NavLink>
 );
 
-// ------------------------------
+// ------------------------------------
 // NAVBAR COMPONENT
-// ------------------------------
+// ------------------------------------
 const Navbar = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+
   const [mobileMenu, setMobileMenu] = useState(false);
 
   const isAdmin =
@@ -88,22 +92,23 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  // FIXED: Folder → FolderOpen
+  // Common Links
   const commonLinks = [
     { to: "/", label: "Home", icon: Home },
     { to: "/myOrganization", label: "My Organization", icon: Briefcase },
     { to: "/yourfiles", label: "Your Files", icon: FolderOpen },
   ];
 
+  // Admin Links
   const adminLinks = isAdmin
     ? [
-      { to: "/adminSettings", label: "Admin Settings", icon: Sliders },
-      { to: "/orglist", label: "Organizations", icon: Users },
-      { to: "/logs", label: "Logs", icon: FileText },
-    ]
+        { to: "/adminSettings", label: "Admin Settings", icon: Sliders },
+        { to: "/orglist", label: "Organizations", icon: Users },
+        { to: "/logs", label: "Logs", icon: FileText },
+      ]
     : [];
 
-  const authLinks = [{ to: "/login", label: "Login/Signup" }];
+  const authLinks = [{ to: "/login", label: "Login / Signup" }];
 
   return (
     <nav
@@ -112,8 +117,7 @@ const Navbar = () => {
       border-b border-white/30 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
     >
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-
-        {/* Logo */}
+        {/* LOGO */}
         <Link to="/" className="flex items-center gap-3">
           <img
             src={logo}
@@ -128,7 +132,7 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop Menu */}
+        {/* DESKTOP NAV */}
         <div
           className="hidden md:flex items-center gap-2 p-1 
           bg-white/40 backdrop-blur-xl 
@@ -138,23 +142,24 @@ const Navbar = () => {
             <NavLink
               key={l.to}
               to={l.to}
-              className="flex items-center gap-2 px-4 py-2 rounded-full
-              hover:bg-white/60 transition"
+              className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/60 transition"
               style={{
                 color: "#0A1A4F",
                 fontWeight: 600,
               }}
             >
-              <l.icon className="h-4 w-4" style={{ color: "#0A1A4F" }} />
+              <l.icon className="h-4 w-4" />
               {l.label}
             </NavLink>
           ))}
 
           {token && (
-            <div className="flex items-center gap-1 ml-1">
-              {/* Admin Dropdown */}
+            <div className="flex items-center gap-2 ml-2">
+              {/* ADMIN DROPDOWN */}
               {isAdmin && (
-                <DropdownMenu trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />}>
+                <DropdownMenu
+                  trigger={<Settings className="h-5 w-5 text-[#0A1A4F]" />}
+                >
                   <div className="px-4 py-1 text-xs font-semibold text-gray-600">
                     Admin Tools
                   </div>
@@ -169,17 +174,19 @@ const Navbar = () => {
                 </DropdownMenu>
               )}
 
-              {/* User Dropdown */}
-              <DropdownMenu trigger={<User className="h-5 w-5 text-[#0A1A4F]" />}>
+              {/* USER DROPDOWN */}
+              <DropdownMenu
+                trigger={<User className="h-5 w-5 text-[#0A1A4F]" />}
+              >
                 <div className="px-4 py-2 font-medium text-sm border-b border-white/40">
-                  {user.email}
+                  {user?.email}
                 </div>
                 <div className="px-4 py-2 text-xs capitalize text-gray-600">
-                  {user.role}
+                  {user?.role}
                 </div>
               </DropdownMenu>
 
-              {/* Logout */}
+              {/* LOGOUT BUTTON */}
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2
@@ -191,6 +198,7 @@ const Navbar = () => {
             </div>
           )}
 
+          {/* Not logged in */}
           {!token &&
             authLinks.map((l) => (
               <NavLink
@@ -205,16 +213,20 @@ const Navbar = () => {
             ))}
         </div>
 
-        {/* Mobile Menu Toggle */}
+        {/* MOBILE MENU TOGGLE */}
         <button
           className="md:hidden p-2"
           onClick={() => setMobileMenu((p) => !p)}
         >
-          {mobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileMenu ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* MOBILE MENU */}
       <AnimatePresence>
         {mobileMenu && (
           <motion.div
@@ -242,7 +254,7 @@ const Navbar = () => {
 
               {isAdmin && (
                 <>
-                  <div className="px-4 py-2 text-sm text-gray-600 font-semibold">
+                  <div className="px-4 py-2 text-sm text-gray-700 font-semibold">
                     Admin Tools
                   </div>
 
