@@ -10,7 +10,7 @@ import { HiOutlineDocumentSearch } from "react-icons/hi";
 
 import "./FilesDashboard.css"; // <- new premium CSS
 
-import bgImage from "../assets/back1.jpg";
+import bgImage from "../assets/lighttheme.jpg";
 
 const FileTypePill = ({ type }) => {
   const map = {
