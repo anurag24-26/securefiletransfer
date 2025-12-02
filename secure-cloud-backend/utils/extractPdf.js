@@ -1,4 +1,4 @@
-const pdf = require("pdf-parse/lib/pdf-parse");
+const pdf = require("pdf-parse");
 
 async function extractPdf(buffer) {
   try {
