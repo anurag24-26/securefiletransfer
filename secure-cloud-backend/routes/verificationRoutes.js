@@ -25,12 +25,11 @@ router.post("/upload", authMiddleware, upload.single("document"), async (req, re
       return res.status(400).json({ message: "No file uploaded." });
     }
 
-    // Check MIME type
     if (req.file.mimetype !== "application/pdf") {
       return res.status(400).json({ message: "Only PDF files are allowed." });
     }
 
-    // Upload to S3 (optional if you want to store it)
+    // Upload file to S3/B2
     const fileKey = `uploads/${Date.now()}-${req.file.originalname}`;
     const s3Url = await uploadToS3(req.file.buffer, fileKey, req.file.mimetype);
 
