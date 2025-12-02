@@ -12,10 +12,48 @@ const { s3, uploadToS3 } = require("../utils/s3Client");
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+
+
+
+// --------------------------------------------------------
+// POST /upload
+// Only upload PDF → verify file type
+// --------------------------------------------------------
+router.post("/upload", authMiddleware, upload.single("document"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    // Check MIME type
+    if (req.file.mimetype !== "application/pdf") {
+      return res.status(400).json({ message: "Only PDF files are allowed." });
+    }
+
+    // Upload to S3 (optional if you want to store it)
+    const fileKey = `uploads/${Date.now()}-${req.file.originalname}`;
+    const s3Url = await uploadToS3(req.file.buffer, fileKey, req.file.mimetype);
+
+    return res.json({
+      message: "PDF uploaded successfully.",
+      fileUrl: s3Url,
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    return res.status(500).json({
+      message: "Internal server error during upload.",
+      error: err.message,
+    });
+  }
+});
+
+
 // --------------------------------------------------------
 // POST /verify-superadmin
 // Upload PDF → Extract → Auto Verify → Approve User
 // --------------------------------------------------------
+
+
 router.post(
   "/verify-superadmin",
   authMiddleware,
