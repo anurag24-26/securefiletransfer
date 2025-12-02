@@ -1,13 +1,13 @@
-const pdf = require("pdf-parse");
+const pdf = require("pdf-parse/lib/pdf-parse");
 
-/**
- * Extract text from PDF buffer
- * @param {Buffer} buffer
- * @returns {Promise<string>} extracted text
- */
 async function extractPdf(buffer) {
-  const data = await pdf(buffer);
-  return data.text;
+  try {
+    const data = await pdf(buffer);
+    return data.text || "";
+  } catch (err) {
+    console.error("PDF extract error:", err);
+    throw new Error("Failed to extract PDF text.");
+  }
 }
 
 module.exports = extractPdf;
