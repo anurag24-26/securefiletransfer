@@ -10,6 +10,8 @@ const orgRoutes = require("./routes/org");
 const userRoutes = require("./routes/user");
 const requestRoutes = require("./routes/requestRoutes");
 const fileRoutes = require("./routes/fileRoutes");
+const verificationRoutes = require("./routes/verificationRoutes");
+
 
 dotenv.config();
 connectDB();
@@ -48,7 +50,7 @@ app.use("/api/org", orgRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/requests", requestRoutes);
-
+app.use("/api/verification", verificationRoutes);
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
