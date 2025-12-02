@@ -14,7 +14,7 @@ import Footer from "./components/Footer";
 import ForgotPassword from "./components/Forget";
 import Logs from "./pages/Logs";
 import About from "./pages/About";
-
+import Verification from "./components/Verification";
 function App() {
   return (
     <AuthProvider>
@@ -32,6 +32,7 @@ function App() {
             <Route path="/adminSettings" element={<AdminSettings />} />
             <Route path="/myOrganization" element={<MyOrganization />} />
             <Route path="/about" element={<About />} />
+              <Route path="/verify" element={<Verification />} />
           </Routes>
         </div>
         <Footer />
