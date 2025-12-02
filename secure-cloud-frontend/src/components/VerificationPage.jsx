@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import api from "../api"; // your axios instance
+import api from "../services/api"; // your axios instance
 
 const VerificationPage = () => {
   const [file, setFile] = useState(null);
