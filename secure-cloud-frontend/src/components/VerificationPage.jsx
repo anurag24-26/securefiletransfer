@@ -31,7 +31,7 @@ const VerificationPage = () => {
       const formData = new FormData();
       formData.append("document", file);
 
-      const res = await api.post("/upload", formData, {
+      const res = await api.post("verification/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -61,7 +61,7 @@ const VerificationPage = () => {
       const formData = new FormData();
       formData.append("document", file);
 
-      const res = await api.post("/verify-superadmin", formData, {
+      const res = await api.post("verification/verify-superadmin", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
