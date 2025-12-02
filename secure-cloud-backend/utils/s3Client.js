@@ -2,7 +2,7 @@ const AWS = require("aws-sdk");
 
 // Initialize S3 (Backblaze B2)
 const s3 = new AWS.S3({
-  endpoint: process.env.B2_ENDPOINT, // no https://
+  endpoint: process.env.B2_ENDPOINT, // Uses your https://s3.us-east-005... (fine for AWS SDK)
   region: "us-east-005",
   signatureVersion: "v4",
   credentials: {
@@ -28,8 +28,20 @@ const uploadToS3 = async (fileBuffer, key, contentType) => {
 
   await s3.putObject(params).promise();
 
-  // Generate public URL
-  const fileUrl = `https://${process.env.B2_BUCKET_NAME}.${process.env.B2_ENDPOINT}/${key}`;
+  // ✅ FIXED: Extract hostname from endpoint for public URL
+  const bucketName = process.env.B2_BUCKET_NAME;
+  const endpointUrl = new URL(process.env.B2_ENDPOINT);
+  const endpointHost = endpointUrl.hostname; // s3.us-east-005.backblazeb2.com
+  
+  // Correct public URL format for Backblaze B2
+  const fileUrl = `https://${endpointHost}/${bucketName}/${key}`;
+  
+  // 🔍 DEBUG LOG (remove after testing)
+  console.log("✅ S3 Upload complete:");
+  console.log("- Bucket:", bucketName);
+  console.log("- Endpoint host:", endpointHost);
+  console.log("- Full URL:", fileUrl);
+  
   return fileUrl;
 };
 
