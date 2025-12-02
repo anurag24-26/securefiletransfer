@@ -1,25 +1,34 @@
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+const PDFParser = require("pdf2json");
 
 async function extractPdf(buffer) {
-  try {
-    const loadingTask = pdfjsLib.getDocument({ data: buffer });
-    const pdf = await loadingTask.promise;
+  return new Promise((resolve, reject) => {
+    const pdfParser = new PDFParser();
 
-    let fullText = "";
+    pdfParser.on("pdfParser_dataError", (err) => {
+      console.error("PDF extract error:", err);
+      reject(new Error("Failed to extract PDF text."));
+    });
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
+    pdfParser.on("pdfParser_dataReady", (data) => {
+      try {
+        let text = "";
 
-      const strings = content.items.map((item) => item.str).join(" ");
-      fullText += strings + "\n";
-    }
+        data.Pages.forEach((page) => {
+          page.Texts.forEach((t) => {
+            const line = t.R.map((r) => decodeURIComponent(r.T)).join(" ");
+            text += line + " ";
+          });
+          text += "\n";
+        });
 
-    return fullText.trim();
-  } catch (err) {
-    console.error("PDF extract error:", err);
-    throw new Error("Failed to extract PDF text.");
-  }
+        resolve(text.trim());
+      } catch (e) {
+        reject(new Error("PDF parsing failed."));
+      }
+    });
+
+    pdfParser.parseBuffer(buffer);
+  });
 }
 
 module.exports = extractPdf;
