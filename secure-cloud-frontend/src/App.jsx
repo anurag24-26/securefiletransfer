@@ -14,7 +14,7 @@ import Footer from "./components/Footer";
 import ForgotPassword from "./components/Forget";
 import Logs from "./pages/Logs";
 import About from "./pages/About";
-import Verification from "./components/Verification";
+import Verification from "./components/VerificationPage.jsx";
 function App() {
   return (
     <AuthProvider>
