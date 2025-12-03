@@ -21,6 +21,7 @@
     "mime-types": "^3.0.1",
     "mongoose": "^8.18.3",
     "multer": "^2.0.2",
+    "node-fetch": "^2.7.0",
     "pdf-parse": "^2.4.5",
     "pdf2json": "^4.0.0",
     "streamifier": "^0.1.1"

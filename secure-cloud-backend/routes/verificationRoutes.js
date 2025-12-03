@@ -1,57 +1,66 @@
+// secure-cloud-backend/routes/verificationRoutes.js
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const extractPdf = require("../utils/extractPdf");
-const verifyEngine = require("../utils/verifyEngine");
 const VerificationRequest = require("../models/VerificationRequest");
 const User = require("../models/User");
 const { authMiddleware } = require("../middleware/authMiddleware");
-const { s3, uploadToS3 } = require("../utils/s3Client");
+const { uploadToS3 } = require("../utils/s3Client");
+const {
+  uploadPdfToGemini,
+  verifyPdfWithGemini,
+} = require("../utils/geminiClient");
 
-// Multer: store temporarily (we delete after upload)
+// Multer: in‑memory buffer
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // --------------------------------------------------------
-// POST /upload
-// Only upload PDF → verify file type → return clean S3 URL
+// POST /upload  (unchanged - only uploads to S3)
 // --------------------------------------------------------
-router.post("/upload", authMiddleware, upload.single("document"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded." });
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("document"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded." });
+      }
+
+      if (req.file.mimetype !== "application/pdf") {
+        return res.status(400).json({ message: "Only PDF files are allowed." });
+      }
+
+      const fileKey = `uploads/${Date.now()}-${req.file.originalname}`;
+      const s3Url = await uploadToS3(
+        req.file.buffer,
+        fileKey,
+        req.file.mimetype
+      );
+
+      console.log("✅ Upload successful:");
+      console.log("- S3 URL:", s3Url);
+      console.log("- File size:", req.file.size);
+
+      return res.json({
+        message: "PDF uploaded successfully.",
+        fileUrl: s3Url,
+        fileKey: fileKey,
+      });
+    } catch (err) {
+      console.error("❌ Upload error:", err);
+      return res.status(500).json({
+        message: "Internal server error during upload.",
+        error: err.message,
+      });
     }
-
-    if (req.file.mimetype !== "application/pdf") {
-      return res.status(400).json({ message: "Only PDF files are allowed." });
-    }
-
-    // Upload file to S3/B2 with clean URL
-    const fileKey = `uploads/${Date.now()}-${req.file.originalname}`;
-    const s3Url = await uploadToS3(req.file.buffer, fileKey, req.file.mimetype);
-
-    // ✅ LOG THE URL FOR DEBUGGING
-    console.log("✅ Upload successful:");
-    console.log("- S3 URL:", s3Url);
-    console.log("- File size:", req.file.size);
-
-    return res.json({
-      message: "PDF uploaded successfully.",
-      fileUrl: s3Url,
-      fileKey: fileKey,
-    });
-  } catch (err) {
-    console.error("❌ Upload error:", err);
-    return res.status(500).json({
-      message: "Internal server error during upload.",
-      error: err.message,
-    });
   }
-});
+);
 
 // --------------------------------------------------------
 // POST /verify-superadmin
-// Upload PDF → Extract → Auto Verify → Approve User
+// Upload PDF → store in S3 → send PDF to Gemini → auto-approve
 // --------------------------------------------------------
 router.post(
   "/verify-superadmin",
@@ -65,7 +74,6 @@ router.post(
         return res.status(400).json({ message: "No PDF file uploaded." });
       }
 
-      // Restrict to only PDF
       if (req.file.mimetype !== "application/pdf") {
         return res.status(400).json({ message: "Only PDF files allowed." });
       }
@@ -73,53 +81,63 @@ router.post(
       console.log("🚀 Starting superadmin verification for user:", userId);
       console.log("- File size:", req.file.size, "bytes");
 
-      // 1. Upload PDF to S3 (for permanent storage)
+      // 1. Upload PDF to S3
       const fileKey = `verification/${Date.now()}-${req.file.originalname}`;
-      const s3Url = await uploadToS3(req.file.buffer, fileKey, req.file.mimetype);
-      
+      const s3Url = await uploadToS3(
+        req.file.buffer,
+        fileKey,
+        req.file.mimetype
+      );
       console.log("✅ S3 Upload complete:", s3Url);
 
-      // 2. Extract text from PDF (using buffer - works offline)
-      console.log("📖 Extracting PDF text...");
-      const pdfText = await extractPdf(req.file.buffer);
+      // 2. Upload PDF to Gemini Files API
+      console.log("☁️ Uploading PDF to Gemini Files API…");
+      const fileUri = await uploadPdfToGemini(
+        req.file.buffer,
+        req.file.originalname
+      );
+      console.log("📎 Gemini file_uri:", fileUri);
 
-      // 3. Auto verify using keyword engine
-      console.log("🔍 Running verification engine...");
-      const isApproved = verifyEngine(pdfText);
+      // 3. Ask Gemini to verify document
+      console.log("🧠 Calling Gemini verification model…");
+      const geminiResult = await verifyPdfWithGemini(fileUri);
+      const isApproved = !!geminiResult.approved;
 
-      // 4. Save verification request record
+      console.log("🔍 Gemini decision:", geminiResult);
+
+      // 4. Save verification request in DB
       const verificationRecord = await VerificationRequest.create({
         userId,
         documentUrl: s3Url,
-        extractedText: pdfText.substring(0, 10000), // Limit stored text
+        extractedText: null, // no local OCR now
         status: isApproved ? "approved" : "rejected",
-        reason: isApproved
-          ? "Auto-approved from detected authority keywords."
-          : "Insufficient authority keywords found.",
+        reason: geminiResult.reason,
+        score: geminiResult.score,
+        geminiRaw: geminiResult.raw,
       });
 
-      // 5. If approved → set user.role = superAdmin
+      // 5. Promote user if approved
       if (isApproved) {
         await User.findByIdAndUpdate(userId, {
           role: "superAdmin",
-          orgId: null, // Allow them to create new organization
+          orgId: null,
         });
         console.log("✅ User promoted to superAdmin:", userId);
       } else {
         console.log("❌ Verification failed for user:", userId);
       }
 
-      // Return response
+      // 6. Respond to client
       return res.json({
         success: true,
         message: isApproved
-          ? "Document verified successfully. You are now a super admin."
-          : "Verification failed. Required authority keywords not detected.",
+          ? "Document verified by Gemini. You are now a super admin."
+          : "Verification failed according to Gemini.",
+        geminiResult,
         request: verificationRecord,
         debug: {
-          textLength: pdfText.length,
-          textSample: pdfText.slice(0, 200),
-          s3Url: s3Url,
+          s3Url,
+          fileUri,
         },
       });
     } catch (err) {
