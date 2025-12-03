@@ -92,13 +92,13 @@ const VerificationPage = () => {
       />
 
       <div className="flex gap-2 mb-4">
-        <button
+        {/* <button
           className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
           onClick={handleUpload}
           disabled={loading}
         >
           {loading ? "Uploading..." : "Upload PDF"}
-        </button>
+        </button> */}
 
         <button
           className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700"
