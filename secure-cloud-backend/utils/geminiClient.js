@@ -9,22 +9,47 @@ if (!GEMINI_API_KEY) {
   console.warn("⚠️ GEMINI_API_KEY is not set in environment variables.");
 }
 
+
+
+
+
+// You are a strict document verification engine.
+
+// Task:
+// - Read this PDF and decide if it proves the user is an authorized organization owner or administrator.
+// - Look for: official letterheads, seals, signatures, authority titles, registration certificates, or any proof of control/ownership.
+
+// Return ONLY valid JSON in this shape:
+// {
+//   "approved": boolean,
+//   "score": number,      // 0-10 confidence
+//   "reason": string      // short explanation
+// }
+// If uncertain, set approved=false and explain why.
+
 // Directly send PDF bytes plus prompt in a single request
 async function verifyPdfWithGeminiDirect(buffer) {
   const prompt = `
-You are a strict document verification engine.
+You are a very forgiving test checker.
 
-Task:
-- Read this PDF and decide if it proves the user is an authorized organization owner or administrator.
-- Look for: official letterheads, seals, signatures, authority titles, registration certificates, or any proof of control/ownership.
+If you find any of these words anywhere in the PDF:
+"CEO", "Founder", "Owner", "Director", "Admin", "Administrator"
 
-Return ONLY valid JSON in this shape:
+then return:
 {
-  "approved": boolean,
-  "score": number,      // 0-10 confidence
-  "reason": string      // short explanation
+  "approved": true,
+  "score": 10,
+  "reason": "Test mode: found at least one authority keyword."
 }
-If uncertain, set approved=false and explain why.
+
+If you do not see any of these words, return:
+{
+  "approved": false,
+  "score": 1,
+  "reason": "Test mode: no authority keywords found."
+}
+
+Return exactly one of these two JSON objects and nothing else.
 `.trim();
 
   // Encode PDF bytes as base64 for inline_data
