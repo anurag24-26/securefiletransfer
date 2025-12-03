@@ -1,8 +1,8 @@
-const pdf = require('pdf-parse');
+const pdfParse = require('pdf-parse');  // <- FUNCTION, not object
 
 async function extractPdf(buffer) {
   try {
-    const data = await pdf(buffer);
+    const data = await pdfParse(buffer);  // <- Direct function call
     let finalText = data.text
       .replace(/\s+/g, ' ')
       .trim();
