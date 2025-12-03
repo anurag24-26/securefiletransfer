@@ -3,7 +3,8 @@ const fetch = require("node-fetch");
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // set in Render dashboard
 const BASE_URL = "https://generativelanguage.googleapis.com";
-const MODEL = "gemini-1.5-flash"; // or gemini-1.5-flash-latest
+const MODEL = "gemini-1.5-flash-latest";
+// or gemini-1.5-flash-latest
 
 if (!GEMINI_API_KEY) {
   console.warn("⚠️ GEMINI_API_KEY is not set in environment variables.");
