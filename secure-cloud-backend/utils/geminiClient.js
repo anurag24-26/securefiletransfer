@@ -1,7 +1,7 @@
 // secure-cloud-backend/utils/geminiClient.js
 const fetch = require("node-fetch");
 
-const GEMINI_API_KEY = AIzaSyC0uSlEkliGDzOZBP4s_NGmfsoLTLdAQ-s; // set in Render dashboard
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // set in Render dashboard
 const BASE_URL = "https://generativelanguage.googleapis.com";
 const MODEL = "gemini-1.5-flash"; // or gemini-1.5-flash-latest
 
