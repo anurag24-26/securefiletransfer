@@ -1,8 +1,9 @@
-const pdfParse = require('pdf-parse');  // <- FUNCTION, not object
+// FIX 1: Default export (most common)
+const pdfParse = require('pdf-parse').default;
 
 async function extractPdf(buffer) {
   try {
-    const data = await pdfParse(buffer);  // <- Direct function call
+    const data = await pdfParse(buffer);
     let finalText = data.text
       .replace(/\s+/g, ' ')
       .trim();
