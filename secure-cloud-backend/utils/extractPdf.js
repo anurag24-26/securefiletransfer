@@ -1,21 +1,23 @@
+// CORRECT IMPORT - Copy this entire file
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
-const { createCanvas, loadImage } = require('canvas');
 
-// Fix for Render/Node.js - Polyfill DOMMatrix
-global.DOMMatrix = class DOMMatrix {
-  constructor(init) { this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0; }
-  multiply(self) { /* simplified */ return new DOMMatrix(); }
-  translate(tx, ty) { this.e += tx; this.f += ty; return this; }
-  scale(sx, sy) { this.a *= sx; this.d *= sy; return this; }
-};
+// Polyfill for Render Node.js 22
+if (typeof global.DOMMatrix === 'undefined') {
+  global.DOMMatrix = class DOMMatrix {
+    constructor() { 
+      this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0; 
+    }
+    translate(tx, ty) { this.e += tx; this.f += ty; return this; }
+    scale(sx) { this.a *= sx; this.d *= sx; return this; }
+  };
+}
 
-// Set worker for Render
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.js`;
+// Worker for Render CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.js`;
 
 async function extractPdf(buffer) {
   try {
-    const loadingTask = pdfjsLib.getDocument({ data: Buffer.from(buffer) });
-    const pdf = await loadingTask.promise;
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
     let text = "";
 
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -42,7 +44,7 @@ async function extractPdf(buffer) {
     
     return finalText;
   } catch (err) {
-    console.error("❌ PDF extract error:", err);
+    console.error("❌ PDF extract error:", err.message);
     throw new Error("Failed to extract PDF text.");
   }
 }
