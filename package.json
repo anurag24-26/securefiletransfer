@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "lucide-react": "^0.554.0"
+    "lucide-react": "^0.554.0",
+    "pdfjs-dist": "^5.4.449"
   }
 }

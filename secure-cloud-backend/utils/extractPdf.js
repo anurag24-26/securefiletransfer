@@ -1,72 +1,41 @@
-const PDFParser = require("pdf2json");
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+const fs = require('fs'); // Only for temp files if needed
+
+// Set worker for Render (CDN-hosted)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.js`;
 
 async function extractPdf(buffer) {
-  return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser();
+  try {
+    const pdf = await pdfjsLib.getDocument({ data: Buffer.from(buffer) }).promise;
+    let text = "";
 
-    pdfParser.on("pdfParser_dataError", (err) => {
-      console.error("❌ PDF extract error:", err);
-      reject(new Error("Failed to extract PDF text."));
-    });
-
-    pdfParser.on("pdfParser_dataReady", (data) => {
-      try {
-        let text = "";
-
-        data.Pages.forEach((page, pageIndex) => {
-          if (page.Texts && page.Texts.length > 0) {
-            page.Texts.forEach((t) => {
-              try {
-                // Robust text decoding
-                const decoded = t.R.map((r) => {
-                  try {
-                    // Handle URI encoded text
-                    let decodedText = decodeURIComponent(r.T);
-                    
-                    // Fix common pdf2json encoding issues
-                    decodedText = decodedText
-                      .replace(/\\([0-9]{3})/g, (match, code) => 
-                        String.fromCharCode(parseInt(code, 8))
-                      )
-                      // Remove control characters and garbage
-                      .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
-                      // Normalize multiple spaces
-                      .replace(/\s+/g, ' ')
-                      .trim();
-                    
-                    return decodedText;
-                  } catch (decodeErr) {
-                    console.warn("Failed to decode text block:", r.T);
-                    return "";
-                  }
-                }).join(" ").trim();
-
-                if (decoded.length > 3) {
-                  text += decoded + " ";
-                }
-              } catch (blockErr) {
-                // Skip problematic text blocks
-              }
-            });
-          }
-          text += "\n";
-        });
-
-        const finalText = text.trim();
-        console.log("📄 PDF Text extraction complete:");
-        console.log("- Total pages:", data.Pages.length);
-        console.log("- Final text length:", finalText.length);
-        console.log("- First 200 chars:", finalText.slice(0, 200));
-        
-        resolve(finalText);
-      } catch (e) {
-        console.error("❌ PDF parsing failed:", e);
-        reject(new Error("PDF parsing failed."));
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      const pageText = textContent.items
+        .map(item => item.str)
+        .join(" ")
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (pageText.length > 3) {
+        text += pageText + " ";
       }
-    });
+      text += "\n";
+    }
 
-    pdfParser.parseBuffer(buffer);
-  });
+    const finalText = text.trim();
+    console.log("📄 PDF Text extraction complete:");
+    console.log("- Total pages:", pdf.numPages);
+    console.log("- Final text length:", finalText.length);
+    console.log("- First 200 chars:", finalText.slice(0, 200));
+    
+    return finalText;
+  } catch (err) {
+    console.error("❌ PDF extract error:", err);
+    throw new Error("Failed to extract PDF text.");
+  }
 }
 
 module.exports = extractPdf;
