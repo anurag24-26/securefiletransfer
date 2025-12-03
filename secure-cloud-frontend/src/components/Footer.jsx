@@ -28,6 +28,9 @@ const Footer = () => {
           <nav className="flex flex-col md:items-end gap-1 text-gray-600 mt-4 md:mt-0">
             <h3 className="text-gray-800 font-semibold text-sm mb-1">Quick Links</h3>
             <div className="flex flex-wrap justify-start md:justify-end gap-3 text-sm">
+               <Link to="/verify" className="hover:text-blue-500 transition-colors duration-200 font-medium">
+                Verification
+              </Link>
               <Link to="/about" className="hover:text-blue-500 transition-colors duration-200 font-medium">
                 About
               </Link>
