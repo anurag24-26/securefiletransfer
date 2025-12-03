@@ -3,7 +3,7 @@ const fetch = require("node-fetch");
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // set in Render dashboard
 const BASE_URL = "https://generativelanguage.googleapis.com";
-const MODEL = "gemini-1.5-flash-latest";
+const MODEL = "gemini-flash-latest";
 // or gemini-1.5-flash-latest
 
 if (!GEMINI_API_KEY) {
@@ -16,7 +16,7 @@ async function uploadPdfToGemini(buffer, filename = "document.pdf") {
 
   // Start resumable upload
   const initRes = await fetch(
-    `${BASE_URL}/upload/v1beta/files?key=${GEMINI_API_KEY}`,
+    `${BASE_URL}/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: {
