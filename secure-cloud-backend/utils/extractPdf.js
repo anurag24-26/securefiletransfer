@@ -1,7 +1,16 @@
-const pdfjsLib = require('pdfjs-dist');
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+const { createCanvas, loadImage } = require('canvas');
 
-// Set worker for Render (CDN)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// Fix for Render/Node.js - Polyfill DOMMatrix
+global.DOMMatrix = class DOMMatrix {
+  constructor(init) { this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0; }
+  multiply(self) { /* simplified */ return new DOMMatrix(); }
+  translate(tx, ty) { this.e += tx; this.f += ty; return this; }
+  scale(sx, sy) { this.a *= sx; this.d *= sy; return this; }
+};
+
+// Set worker for Render
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.js`;
 
 async function extractPdf(buffer) {
   try {
