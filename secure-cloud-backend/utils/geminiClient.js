@@ -1,81 +1,16 @@
 // secure-cloud-backend/utils/geminiClient.js
 const fetch = require("node-fetch");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // set in Render dashboard
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const BASE_URL = "https://generativelanguage.googleapis.com";
-const MODEL = "gemini-flash-latest";
-// or gemini-1.5-flash-latest
+const MODEL = "gemini-1.5-flash"; // valid for v1beta
 
 if (!GEMINI_API_KEY) {
   console.warn("⚠️ GEMINI_API_KEY is not set in environment variables.");
 }
 
-// 1) Upload raw PDF bytes to Gemini Files API → returns file_uri
-async function uploadPdfToGemini(buffer, filename = "document.pdf") {
-  const numBytes = buffer.length;
-
-  // Start resumable upload
-  const initRes = await fetch(
-    `${BASE_URL}/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "X-Goog-Upload-Protocol": "resumable",
-        "X-Goog-Upload-Command": "start",
-        "X-Goog-Upload-Header-Content-Length": String(numBytes),
-        "X-Goog-Upload-Header-Content-Type": "application/pdf",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        file: {
-          display_name: filename,
-        },
-      }),
-    }
-  );
-
-  if (!initRes.ok) {
-    const text = await initRes.text();
-    throw new Error(`Gemini upload init failed: ${initRes.status} ${text}`);
-  }
-
-  const uploadUrl = initRes.headers.get("x-goog-upload-url");
-  if (!uploadUrl) {
-    throw new Error("Gemini upload URL missing in response headers.");
-  }
-
-  // Upload actual bytes
-  const uploadRes = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      "Content-Length": String(numBytes),
-      "X-Goog-Upload-Offset": "0",
-      "X-Goog-Upload-Command": "upload, finalize",
-      "Content-Type": "application/pdf",
-    },
-    body: buffer,
-  });
-
-  const fileInfo = await uploadRes.json().catch(() => ({}));
-  if (!uploadRes.ok) {
-    throw new Error(
-      `Gemini file upload failed: ${uploadRes.status} ${JSON.stringify(
-        fileInfo
-      )}`
-    );
-  }
-
-  const fileUri = fileInfo.file?.uri;
-  if (!fileUri) {
-    throw new Error("Gemini response missing file.uri");
-  }
-
-  console.log("📎 Gemini file uploaded:", fileUri);
-  return fileUri;
-}
-
-// 2) Ask Gemini to verify the uploaded PDF using file_uri
-async function verifyPdfWithGemini(fileUri) {
+// Directly send PDF bytes plus prompt in a single request
+async function verifyPdfWithGeminiDirect(buffer) {
   const prompt = `
 You are a strict document verification engine.
 
@@ -92,6 +27,9 @@ Return ONLY valid JSON in this shape:
 If uncertain, set approved=false and explain why.
 `.trim();
 
+  // Encode PDF bytes as base64 for inline_data
+  const base64Pdf = buffer.toString("base64");
+
   const res = await fetch(
     `${BASE_URL}/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
     {
@@ -104,14 +42,15 @@ If uncertain, set approved=false and explain why.
             parts: [
               { text: prompt },
               {
-                file_data: {
+                inline_data: {
                   mime_type: "application/pdf",
-                  file_uri: fileUri,
+                  data: base64Pdf,
                 },
               },
             ],
           },
         ],
+        // v1beta expects this name exactly: generationConfig is okay per docs
         generationConfig: {
           temperature: 0.2,
           responseMimeType: "application/json",
@@ -141,16 +80,12 @@ If uncertain, set approved=false and explain why.
 
   return {
     approved: !!parsed.approved,
-    score:
-      typeof parsed.score === "number"
-        ? parsed.score
-        : null,
+    score: typeof parsed.score === "number" ? parsed.score : null,
     reason: parsed.reason || "No reason provided.",
     raw,
   };
 }
 
 module.exports = {
-  uploadPdfToGemini,
-  verifyPdfWithGemini,
+  verifyPdfWithGeminiDirect,
 };

@@ -7,9 +7,9 @@ const User = require("../models/User");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const { uploadToS3 } = require("../utils/s3Client");
 const {
-  uploadPdfToGemini,
-  verifyPdfWithGemini,
+  verifyPdfWithGeminiDirect,
 } = require("../utils/geminiClient");
+
 
 // Multer: in‑memory buffer
 const storage = multer.memoryStorage();
@@ -62,6 +62,10 @@ router.post(
 // POST /verify-superadmin
 // Upload PDF → store in S3 → send PDF to Gemini → auto-approve
 // --------------------------------------------------------
+// At top of file
+
+// ...
+
 router.post(
   "/verify-superadmin",
   authMiddleware,
@@ -90,22 +94,14 @@ router.post(
       );
       console.log("✅ S3 Upload complete:", s3Url);
 
-      // 2. Upload PDF to Gemini Files API
-      console.log("☁️ Uploading PDF to Gemini Files API…");
-      const fileUri = await uploadPdfToGemini(
-        req.file.buffer,
-        req.file.originalname
-      );
-      console.log("📎 Gemini file_uri:", fileUri);
-
-      // 3. Ask Gemini to verify document
-      console.log("🧠 Calling Gemini verification model…");
-      const geminiResult = await verifyPdfWithGemini(fileUri);
+      // 2. Send PDF bytes directly to Gemini
+      console.log("🧠 Calling Gemini verification model with inline PDF…");
+      const geminiResult = await verifyPdfWithGeminiDirect(req.file.buffer);
       const isApproved = !!geminiResult.approved;
 
       console.log("🔍 Gemini decision:", geminiResult);
 
-      // 4. Save verification request in DB
+      // 3. Save verification request in DB
       const verificationRecord = await VerificationRequest.create({
         userId,
         documentUrl: s3Url,
@@ -116,7 +112,7 @@ router.post(
         geminiRaw: geminiResult.raw,
       });
 
-      // 5. Promote user if approved
+      // 4. Promote user if approved
       if (isApproved) {
         await User.findByIdAndUpdate(userId, {
           role: "superAdmin",
@@ -127,7 +123,7 @@ router.post(
         console.log("❌ Verification failed for user:", userId);
       }
 
-      // 6. Respond to client
+      // 5. Respond to client
       return res.json({
         success: true,
         message: isApproved
@@ -137,7 +133,6 @@ router.post(
         request: verificationRecord,
         debug: {
           s3Url,
-          fileUri,
         },
       });
     } catch (err) {
@@ -150,5 +145,6 @@ router.post(
     }
   }
 );
+
 
 module.exports = router;
