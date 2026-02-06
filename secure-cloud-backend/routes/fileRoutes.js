@@ -178,11 +178,11 @@ router.post("/upload", authMiddleware, upload.single("file"), async (req, res) =
     const s3 = require("../utils/s3Client");
     const fileBuffer = fs.readFileSync(encryptedPath);
 
-    await s3.upload({
-      Bucket: process.env.B2_BUCKET_NAME,
-      Key: `encrypted/${file.filename}`,
-      Body: fileBuffer,
-    }).promise();
+   await s3.upload({
+  Bucket: process.env.B2_BUCKET_NAME,
+  Key: `encrypted/${file.filename}`,
+  Body: fileBuffer,
+}).promise();
 
     try { fs.unlinkSync(encryptedPath); } catch (e) {}
 
