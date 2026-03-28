@@ -19,7 +19,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
 // Auth guard
-import PrivateRoute from "./components/ProtectedRoute.jsx";
+import PrivateRoute from "./components/PrivateRoute.jsx";
 
 function App() {
   return (
