@@ -1,44 +1,43 @@
 import axios from "axios";
 
-// const api = axios.create({
-//   baseURL: "http:localhost:5000/api", // backend URL
-//   timeout: 15000,
-// });
 const api = axios.create({
-  baseURL: "https://securefiletransfer-0kub.onrender.com/api", // backend URL
+  baseURL: "https://securefiletransfer-0kub.onrender.com/api",
   timeout: 15000,
 });
 
-
-// <-- local host address where backend is running
-
-
-// --- ✅ NEW: Load token from localStorage on startup
-const token = localStorage.getItem("token");
-if (token) {
-  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+// ✅ Load token from localStorage on app startup
+const savedToken = localStorage.getItem("token");
+if (savedToken) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
 }
 
-// --- Function to set or remove Authorization header
+// ✅ Set or clear the Authorization header (single source of truth)
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    localStorage.setItem("token", token); // ✅ persist token
   } else {
     delete api.defaults.headers.common["Authorization"];
-    localStorage.removeItem("token");
   }
 };
 
-// Optional: intercept requests for debugging
-api.interceptors.request.use(
-  (config) => config,
-  (error) => Promise.reject(error)
-);
-
+// ✅ Response interceptor — auto logout on 401 (expired/invalid token)
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error)
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid — clear everything
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("tokenExpiry");
+      delete api.defaults.headers.common["Authorization"];
+
+      // Redirect to login only if not already there
+      if (!window.location.pathname.includes("/auth")) {
+        window.location.href = "/auth";
+      }
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

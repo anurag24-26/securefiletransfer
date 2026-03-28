@@ -1,5 +1,5 @@
-// AuthPage.js
-import React, { useState } from "react";
+// AuthPage.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,7 +12,7 @@ import bgImage from "../assets/back1.jpg";
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { login, loading, error: loginError } = useAuth();
+  const { login, loading, error: loginError, isAuthenticated } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
 
   // Login form
@@ -20,34 +20,47 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
 
   // Signup form
-  const [signupData, setSignupData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+  const [signupData, setSignupData] = useState({ name: "", email: "", password: "" });
   const [signupError, setSignupError] = useState("");
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  // ✅ If already logged in, redirect away from auth page immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     const success = await login(email, password);
-    if (success) navigate("/");
+    if (success) {
+      navigate("/", { replace: true }); // ✅ replace: true prevents back-button returning to login
+    }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setSignupError("");
+    setSignupSuccess(false);
     try {
       await api.post("/auth/signup", signupData);
-      setIsLogin(true);
+      setSignupSuccess(true);
+      setSignupData({ name: "", email: "", password: "" });
+      // Auto-switch to login after 1.5s
+      setTimeout(() => {
+        setIsLogin(true);
+        setSignupSuccess(false);
+      }, 1500);
     } catch (err) {
-      setSignupError(err.response?.data?.message || "Signup failed");
+      setSignupError(err.response?.data?.message || "Signup failed. Please try again.");
     }
   };
 
-  const switchMode = () => setIsLogin(!isLogin);
-
-  const handleForgotPassword = () => {
-    navigate("/forgot-password");
+  const switchMode = () => {
+    setIsLogin(!isLogin);
+    setSignupError("");
+    setSignupSuccess(false);
   };
 
   return (
@@ -56,6 +69,7 @@ const AuthPage = () => {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       <div className="relative flex flex-col md:flex-row bg-white/20 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full mx-4 border border-white/30">
+
         {/* Left Side Image */}
         <motion.div
           key={isLogin ? "login-image" : "signup-image"}
@@ -63,27 +77,14 @@ const AuthPage = () => {
           initial={{ opacity: 0, scale: 0.9, x: isLogin ? -100 : 100 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 0.9, x: isLogin ? 100 : -100 }}
-          transition={{
-            type: "spring",
-            stiffness: 80,
-            damping: 18,
-            duration: 0.6,
-          }}
+          transition={{ type: "spring", stiffness: 80, damping: 18, duration: 0.6 }}
           className="hidden md:flex md:w-1/2 justify-center items-center"
         >
-          {isLogin ? (
-            <img
-              src={sideImageLogin}
-              alt="Login illustration"
-              className="w-3/4 h-3/4 object-contain"
-            />
-          ) : (
-            <img
-              src={sideImageSignup}
-              alt="Signup illustration"
-              className="w-3/4 h-3/4 object-contain"
-            />
-          )}
+          <img
+            src={isLogin ? sideImageLogin : sideImageSignup}
+            alt={isLogin ? "Login illustration" : "Signup illustration"}
+            className="w-3/4 h-3/4 object-contain"
+          />
         </motion.div>
 
         {/* Right Side Form */}
@@ -98,15 +99,11 @@ const AuthPage = () => {
               initial={{ opacity: 0, y: 40, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -40, scale: 0.95 }}
-              transition={{
-                type: "spring",
-                stiffness: 120,
-                damping: 20,
-                duration: 0.6,
-              }}
+              transition={{ type: "spring", stiffness: 120, damping: 20, duration: 0.6 }}
               className="w-full max-w-sm"
             >
               {isLogin ? (
+                /* ───── LOGIN FORM ───── */
                 <>
                   <h2 className="text-3xl font-bold text-white text-center mb-4 drop-shadow-md">
                     Welcome Back
@@ -129,6 +126,7 @@ const AuthPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
+                      autoComplete="email"
                     />
                     <input
                       type="password"
@@ -137,12 +135,13 @@ const AuthPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
+                      autoComplete="current-password"
                     />
 
                     <div className="flex justify-end text-sm">
                       <button
                         type="button"
-                        onClick={handleForgotPassword}
+                        onClick={() => navigate("/forgot-password")}
                         className="text-blue-300 hover:text-blue-400 transition font-medium"
                       >
                         Forgot Password?
@@ -154,25 +153,31 @@ const AuthPage = () => {
                       whileTap={{ scale: 0.97 }}
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition"
+                      className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {loading ? "Logging in..." : "Login"}
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                          </svg>
+                          Logging in...
+                        </span>
+                      ) : "Login"}
                     </motion.button>
                   </form>
 
                   <div className="text-center mt-5">
                     <p className="text-white">
-                      Don’t have an account?{" "}
-                      <button
-                        onClick={switchMode}
-                        className="text-blue-300 font-medium hover:text-blue-400 transition"
-                      >
+                      Don't have an account?{" "}
+                      <button onClick={switchMode} className="text-blue-300 font-medium hover:text-blue-400 transition">
                         Sign Up
                       </button>
                     </p>
                   </div>
                 </>
               ) : (
+                /* ───── SIGNUP FORM ───── */
                 <>
                   <h2 className="text-3xl font-bold text-white text-center mb-4 drop-shadow-md">
                     Create Account
@@ -187,39 +192,39 @@ const AuthPage = () => {
                     </p>
                   )}
 
+                  {signupSuccess && (
+                    <p className="text-green-400 text-center mb-4 font-medium animate-pulse">
+                      ✅ Account created! Redirecting to login...
+                    </p>
+                  )}
+
                   <form onSubmit={handleSignup} className="space-y-5">
                     <input
                       type="text"
                       placeholder="Full Name"
                       value={signupData.name}
-                      onChange={(e) =>
-                        setSignupData({ ...signupData, name: e.target.value })
-                      }
+                      onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
+                      autoComplete="name"
                     />
                     <input
                       type="email"
                       placeholder="Email"
                       value={signupData.email}
-                      onChange={(e) =>
-                        setSignupData({ ...signupData, email: e.target.value })
-                      }
+                      onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
+                      autoComplete="email"
                     />
                     <input
                       type="password"
                       placeholder="Password"
                       value={signupData.password}
-                      onChange={(e) =>
-                        setSignupData({
-                          ...signupData,
-                          password: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       className="w-full p-3 rounded-xl bg-white/20 placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       required
+                      autoComplete="new-password"
                     />
 
                     <motion.button
@@ -235,10 +240,7 @@ const AuthPage = () => {
                   <div className="text-center mt-5">
                     <p className="text-white">
                       Already have an account?{" "}
-                      <button
-                        onClick={switchMode}
-                        className="text-blue-300 font-medium hover:text-blue-400 transition"
-                      >
+                      <button onClick={switchMode} className="text-blue-300 font-medium hover:text-blue-400 transition">
                         Login
                       </button>
                     </p>
