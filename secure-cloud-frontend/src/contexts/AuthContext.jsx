@@ -4,18 +4,23 @@ import api, { setAuthToken } from "../services/api";
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
-// ✅ How long to keep the user logged in (7 days in ms)
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
 
-  // ✅ CRITICAL: Start as TRUE so PrivateRoute waits before redirecting
-  const [loading, setLoading] = useState(true);
+  // sessionLoading = true ONLY during the initial page-load token restore
+  // This is what PrivateRoute watches — must start true, set false once checked
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  // loginLoading = true only while the login API call is in-flight
+  // Used by the Login button spinner — does NOT block PrivateRoute
+  const [loginLoading, setLoginLoading] = useState(false);
+
   const [error, setError] = useState(null);
 
-  // ✅ Restore login state on page reload
+  // Restore session on page reload
   useEffect(() => {
     const restoreSession = async () => {
       try {
@@ -23,45 +28,48 @@ export const AuthProvider = ({ children }) => {
         const savedExpiry = localStorage.getItem("tokenExpiry");
         const savedUser = localStorage.getItem("user");
 
-        // Check if token exists and hasn't expired
-        const isExpired = savedExpiry && Date.now() > parseInt(savedExpiry);
+        const isExpired =
+          savedExpiry && Date.now() > parseInt(savedExpiry, 10);
 
         if (!savedToken || isExpired) {
-          // Clear stale data
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           localStorage.removeItem("tokenExpiry");
-          return;
+          return; // finally still runs
         }
 
-        // Token is valid — restore session
         setAuthToken(savedToken);
         setToken(savedToken);
 
         if (savedUser) {
-          setUser(JSON.parse(savedUser));
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch {
+            // Corrupted JSON — fetch fresh from backend
+            const res = await api.get("/auth/me");
+            setUser(res.data.user);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+          }
         } else {
-          // Fallback: fetch user from backend
           const res = await api.get("/auth/me");
           setUser(res.data.user);
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
-      } catch (err) {
-        // If /auth/me fails (401), the interceptor in api.js handles cleanup
+      } catch {
+        // 401 is handled by api.js interceptor — just clear state here
         setUser(null);
         setToken(null);
       } finally {
-        // ✅ ALWAYS unblock the UI after checking
-        setLoading(false);
+        // ALWAYS unblock PrivateRoute after session check completes
+        setSessionLoading(false);
       }
     };
 
     restoreSession();
   }, []);
 
-  // ✅ Login — stores token with expiry timestamp
   const login = async (email, password) => {
-    setLoading(true);
+    setLoginLoading(true); // only loginLoading, NOT sessionLoading
     setError(null);
     try {
       const { data } = await api.post("/auth/login", { email, password });
@@ -78,14 +86,15 @@ export const AuthProvider = ({ children }) => {
 
       return true;
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(
+        err.response?.data?.message || "Login failed. Please try again."
+      );
       return false;
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
-  // ✅ Logout — clears all auth state and storage
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -102,7 +111,8 @@ export const AuthProvider = ({ children }) => {
         token,
         login,
         logout,
-        loading,
+        loading: loginLoading,   // AuthPage uses this for the button spinner
+        sessionLoading,          // PrivateRoute uses this to wait on page refresh
         error,
         setUser,
         isAuthenticated: !!user,
