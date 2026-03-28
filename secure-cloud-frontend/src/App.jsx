@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 
 // Pages
-import AuthPage from "./pages/AuthPage";       // ✅ unified login/signup page
+import AuthPage from "./pages/Login";       // ✅ unified login/signup page
 import Home from "./pages/Home";
 import OrgList from "./pages/OrgList";
 import AdminSettings from "./pages/AdminSettings";
