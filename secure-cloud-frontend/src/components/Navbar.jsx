@@ -84,7 +84,7 @@ const Navbar = () => {
   // ✅ Fixed: navigate to /auth (not /login which no longer exists)
   const handleLogout = () => {
     logout();
-    navigate("/auth", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const commonLinks = [
@@ -171,7 +171,7 @@ const Navbar = () => {
           {/* ✅ Not logged in — show Login/Signup link pointing to /auth */}
           {!isAuthenticated && (
             <NavLink
-              to="/auth"
+              to="/login"
               className="px-4 py-2 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition"
             >
               Login / Signup
